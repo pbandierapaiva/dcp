@@ -53,6 +53,44 @@ class HostInfo(BaseModel):
 async def root():
     return RedirectResponse("/web/host.html")
 
+
+@app.get("/hosts")
+async def host():
+	db = DB()
+
+	# somente Hosts que não são VMs 'V'
+	db.cursor.execute("Select id,nome,comentario,estado,tipo,cpu,n,mem from maq where tipo!='V'")
+	tudo = db.cursor.fetchall()
+
+	d = []
+	for li in tudo:
+		db.cursor.execute("Select rede,ip from netdev where maq='"+str(li['id'])+"'")
+		interfaces = db.cursor.fetchall()
+
+		li['redes'] = {}
+		for iface in interfaces:
+			li['redes'][iface["ip"]]=iface["rede"]
+		d.append(li)
+	return JSONResponse(content=jsonable_encoder(d))
+
+@app.get("/hosts/{hostid}")
+async def hostinfoById(hostid):
+	db = DB()
+
+	db.cursor.execute("Select * from maq where id='"+hostid+"'")
+	h = db.cursor.fetchone()
+
+	if not h:
+		return None
+
+	db.cursor.execute("Select rede,ip from netdev where maq='"+str(h['id'])+"'")
+	interfaces = db.cursor.fetchall()
+
+	h['redes'] = {}
+	for iface in interfaces:
+		h['redes'][iface["ip"]]=iface["rede"]
+	return JSONResponse(content=jsonable_encoder(h))
+
 @app.get("/hosts/{hostid}/powerstatus")
 async def hostinfoPowerStatus(hostid):
 	db = DB()
@@ -117,6 +155,87 @@ async def hostinfoPowerStatus(hostid,estado):
 	except: 
 		print("ERRO DE UPDATE")
 
+@app.post("/hosts/{host_id}/status/{status}")
+async def estadoHost(host_id, status):
+	if status not in ["on","off","other"]:
+		return JSONResponse(content=jsonable_encoder({"STATUS":"ERROR","MSG":"Status not on or off"}))
+	if status=="on":
+		s="1"
+	elif status=="off":
+		s="0"
+	else: s = "-1"
+	sql = "UPDATE maq SET estado='%s' WHERE id=%s"%(s,host_id)
+	db = DB()
+	try:
+		status = db.cursor.execute(sql)
+		db.commit()
+	except Exception as ex:
+		return JSONResponse(content=jsonable_encoder({'STATUS':'ERROR', 'MSG':ex.args}))
+	return JSONResponse(content=jsonable_encoder({"STATUS":"OK"}))
+
+@app.post("/hosts/{host_id}/tipo/{tipo}")
+async def tipoMaq(host_id, tipo):
+	if tipo not in ["H","S","V"]:
+		return JSONResponse(content=jsonable_encoder({"STATUS":"ERROR","MSG":"Status not on or off"}))
+	sql = "UPDATE maq SET tipo='%s' WHERE id=%s"%(tipo,host_id)
+	db = DB()
+	try:
+		status = db.cursor.execute(sql)
+		db.commit()
+	except Exception as ex:
+		return JSONResponse(content=jsonable_encoder({'STATUS':'ERROR', 'MSG':ex.args}))
+	return JSONResponse(content=jsonable_encoder({"STATUS":"OK"}))
+
+@app.get("/hosts/{hostid}/ambient")
+async def hostinfoPowerStatus(hostid):
+	db = DB()
+
+	db.cursor.execute("Select netdev.ip, maq.altsec from maq,netdev where maq.id=netdev.maq AND maq.id='"+hostid+"' AND netdev.rede='ipmi'")
+	h = db.cursor.fetchone()
+
+	if not h:
+		o = {"hostid":hostid,"STATUS":"ERRO", "msg":"Não encontrado no banco" }
+		return JSONResponse(content=jsonable_encoder(o))
+	ip = h["ip"]
+	if h["altsec"]:
+		executa = ['ipmitool','-c', '-I','lanplus','-H', ip, '-U', 'admin', '-P', h["altsec"], "sensor", "get", "'Ambient Temp'"]
+	else:
+		executa = ['ipmitool','-c', '-I','lanplus','-H', ip, '-U', 'admin', '-P', rootpw, "sensor", "get", "'Ambient Temp'"]
+
+	output = subprocess.Popen(executa)
+	#, capture_output=True, text=True,	timeout=180	)
+	output.wait(timeout=180)
+	o = {"hostid":hostid,"ip":ip}
+	if output.returncode==1:
+		o["STATUS"]='ERRO'
+		o["msg"]= output.stderr
+	else:
+		o["STATUS"]='OK'
+		mensagem="<pre>"
+		for i in output.stdout:
+			mensagem += str(output.stdout)
+		mensagem+="</pre>"
+		o["msg"]= mensagem
+	return mensagem
+	# return JSONResponse(content=jsonable_encoder(o))
+
+@app.post("/hosts/{host_id}")
+async def atualizaHost(item: HostInfo):
+		setexpression = " SET nome='%s',comentario='%s', estado='%s', tipo='%s', so='%s', kernel='%s', cpu='%s', n=%d, mem=%d "%\
+			(item.nome, item.comentario, item.estado, item.tipo, item.so, item.kernel, item.cpu, item.n, item.mem)
+
+		if item.hospedeiro:
+			setexpression+= ", hospedeiro=%d"%(item.hospedeiro)
+		cmdupd = "UPDATE maq  "+setexpression+"  WHERE id=%d"%(item.hostid)
+
+		db = DB()
+		try:
+			status = db.cursor.execute(cmdupd)
+			db.commit()
+		except:
+			return JSONResponse(content=jsonable_encoder({"STATUS":'ERROR: updating database'}))
+		return JSONResponse(content=jsonable_encoder({"data":item.hostid, "STATUS":"OK"}))
+
 @app.get("/busca/{nome}")
 async def hostsearch(nome):
 	db = DB()
@@ -134,43 +253,6 @@ async def hostsearch(nome):
 			h['redes'][iface["ip"]]=iface["rede"]
 
 	return JSONResponse(content=jsonable_encoder(hostlist))
-
-@app.get("/hosts/{hostid}")
-async def hostinfoById(hostid):
-	db = DB()
-
-	db.cursor.execute("Select * from maq where id='"+hostid+"'")
-	h = db.cursor.fetchone()
-
-	if not h:
-		return None
-
-	db.cursor.execute("Select rede,ip from netdev where maq='"+str(h['id'])+"'")
-	interfaces = db.cursor.fetchall()
-
-	h['redes'] = {}
-	for iface in interfaces:
-		h['redes'][iface["ip"]]=iface["rede"]
-	return JSONResponse(content=jsonable_encoder(h))
-
-@app.get("/hosts")
-async def host():
-	db = DB()
-
-	# somente Hosts que não são VMs 'V'
-	db.cursor.execute("Select id,nome,comentario,estado,tipo,cpu,n,mem from maq where tipo!='V'")
-	tudo = db.cursor.fetchall()
-
-	d = []
-	for li in tudo:
-		db.cursor.execute("Select rede,ip from netdev where maq='"+str(li['id'])+"'")
-		interfaces = db.cursor.fetchall()
-
-		li['redes'] = {}
-		for iface in interfaces:
-			li['redes'][iface["ip"]]=iface["rede"]
-		d.append(li)
-	return JSONResponse(content=jsonable_encoder(d))
 
 @app.get("/nets")
 async def listaNets():
@@ -239,7 +321,6 @@ async def catrelease(ip):
 	client.load_system_host_keys()
 	client.load_host_keys("/home/paiva/.ssh/known_hosts")
 	client.connect(ip,username='root',password=rootpw)
-	ret["STATUS"]=""
 	stdin, stdout, stderr = client.exec_command("cat /etc/system-release")
 	try:
 		ret['so'] = stdout.read()
@@ -326,87 +407,3 @@ async def criaVM(i: HostInfo):
 	except:
 		return JSONResponse(content=jsonable_encoder({"STATUS":'ERROR: inserting into database'}))
 	return JSONResponse(content=jsonable_encoder({"data":i.hostid, "STATUS":"OK"}))
-
-@app.post("/hosts/{host_id}/status/{status}")
-async def estadoHost(host_id, status):
-	if status not in ["on","off","other"]:
-		return JSONResponse(content=jsonable_encoder({"STATUS":"ERROR","MSG":"Status not on or off"}))
-	if status=="on":
-		s="1"
-	elif status=="off":
-		s="0"
-	else: s = "-1"
-	sql = "UPDATE maq SET estado='%s' WHERE id=%s"%(s,host_id)
-	db = DB()
-	try:
-		status = db.cursor.execute(sql)
-		db.commit()
-	except Exception as ex:
-		return JSONResponse(content=jsonable_encoder({'STATUS':'ERROR', 'MSG':ex.args}))
-	return JSONResponse(content=jsonable_encoder({"STATUS":"OK"}))
-
-@app.post("/hosts/{host_id}/tipo/{tipo}")
-async def tipoMaq(host_id, tipo):
-	if tipo not in ["H","S","V"]:
-		return JSONResponse(content=jsonable_encoder({"STATUS":"ERROR","MSG":"Status not on or off"}))
-	sql = "UPDATE maq SET tipo='%s' WHERE id=%s"%(tipo,host_id)
-	db = DB()
-	try:
-		status = db.cursor.execute(sql)
-		db.commit()
-	except Exception as ex:
-		return JSONResponse(content=jsonable_encoder({'STATUS':'ERROR', 'MSG':ex.args}))
-	return JSONResponse(content=jsonable_encoder({"STATUS":"OK"}))
-
-
-@app.get("/hosts/{hostid}/ambient")
-async def hostinfoPowerStatus(hostid):
-	db = DB()
-
-	db.cursor.execute("Select netdev.ip, maq.altsec from maq,netdev where maq.id=netdev.maq AND maq.id='"+hostid+"' AND netdev.rede='ipmi'")
-	h = db.cursor.fetchone()
-
-	if not h:
-		o = {"hostid":hostid,"STATUS":"ERRO", "msg":"Não encontrado no banco" }
-		return JSONResponse(content=jsonable_encoder(o))
-	ip = h["ip"]
-	if h["altsec"]:
-		executa = ['ipmitool','-c', '-I','lanplus','-H', ip, '-U', 'admin', '-P', h["altsec"], "sensor", "get", "'Ambient Temp'"]
-	else:
-		executa = ['ipmitool','-c', '-I','lanplus','-H', ip, '-U', 'admin', '-P', rootpw, "sensor", "get", "'Ambient Temp'"]
-
-	output = subprocess.Popen(executa)
-	#, capture_output=True, text=True,	timeout=180	)
-	output.wait(timeout=180)
-	o = {"hostid":hostid,"ip":ip}
-	if output.returncode==1:
-		o["STATUS"]='ERRO'
-		o["msg"]= output.stderr
-	else:
-		o["STATUS"]='OK'
-		mensagem="<pre>"
-		for i in output.stdout:
-			mensagem += str(output.stdout)
-		mensagem+="</pre>"
-		o["msg"]= mensagem
-	return mensagem
-	# return JSONResponse(content=jsonable_encoder(o))
-
-
-@app.post("/hosts/{host_id}")
-async def atualizaHost(item: HostInfo):
-
-		setexpression = " SET nome='%s',comentario='%s', estado='%s', tipo='%s', so='%s', kernel='%s', cpu='%s', n=%d, mem=%d "%\
-			(item.nome, item.comentario, item.estado, item.tipo, item.so, item.kernel, item.cpu, item.n, item.mem)
-
-		if item.hospedeiro:
-			setexpression+= ", hospedeiro=%d"%(item.hospedeiro)
-		cmdupd = "UPDATE maq  "+setexpression+"  WHERE id=%d"%(item.hostid)
-
-		db = DB()
-		try:
-			status = db.cursor.execute(cmdupd)
-			db.commit()
-		except:
-			return JSONResponse(content=jsonable_encoder({"STATUS":'ERROR: updating database'}))
-		return JSONResponse(content=jsonable_encoder({"data":item.hostid, "STATUS":"OK"}))
