@@ -156,9 +156,9 @@ class NodeInfo(html.DIV):
 	# 		self.hostid = h["id"]
 	# 		self.loc = "/hosts/"+str(h["id"])
 	# 		self.onLoadInfo(h)
-	# def carrega(self):
-	# 	ajax.get(self.loc, oncomplete=self.onLoadInfo)
-	# 	self.clear()
+	def refresh(self):
+	 	ajax.get(self.loc, oncomplete=self.onLoadInfo)
+	 	self.clear()
 	def onLoadInfo(self, req):
 		# if type(req)==dict:
 		# 	self.dadoshost=req
@@ -243,7 +243,7 @@ class NodeInfo(html.DIV):
 	def salvar(self, ev):
 		if not self.alterado():
 			Alerta("Dados inalterados","Informações de nó")
-			self.carrega()
+			self.refresh()
 			return
 		dados = {"hostid": self.hostid,
 				"nome" :  self.nome.valor(),
@@ -264,13 +264,13 @@ class NodeInfo(html.DIV):
 	def added(self,req):
 		if req.json["STATUS"]!="OK":
 			Alerta("Erro de atualização de Host","Erro")
-		self.carrega()
+		self.refresh()
 	def cancelar(self, ev):
 		if self.alterado():
 			if confirm("Descartar alterações?"):
-				self.carrega()
+				self.refresh()
 		else:
-			self.carrega()
+			self.refresh()
 
 class NodeInfoLine(html.DIV):
 	def __init__(self, hinfodic):
@@ -301,11 +301,11 @@ class EstadoVM(html.DIV):
 				self.ip = n
 				self.ips.append(n)
 
-		anc = html.SPAN(hostinfo["nome"]+"("+str(hostinfo["id"])+")", Class="w3-ripple")
-		anc.bind("click",self.homeHost)
-		tit = html.DIV()
-		tit.innerHTML = "VMs on host: "
-		tit <= anc
+		# anc = html.SPAN(hostinfo["nome"]+"("+str(hostinfo["id"])+")", Class="w3-ripple")
+		# anc.bind("click",self.homeHost)
+		# tit = html.DIV()
+		# tit.innerHTML = "VMs on host: "
+		# tit <= anc
 		self.refresh()
 	def homeHost(self,ev):
 		document["infoarea"].innerHTML=""
@@ -321,14 +321,15 @@ class EstadoVM(html.DIV):
 		for vm in self.vms:
 			if vm["estado"]!='1':
 				self <= NodeInfoLine(vm)
-		self.rev = html.DIV(Class="w3-container w3-margin w3-ripple")
-		self.rev <= 	html.I(Class="fa fa-refresh")
+		self.rev = html.DIV(Class="w3-container w3-margin w3-ripple fa fa-refresh")
+		# self.rev <=	html.I(Class="fa fa-refresh")
 		self.rev.bind("click",self.refreshHostVMs)
 		self <= self.rev
 	def refreshHostVMs(self, req):
 		Confirma("Conectar ao servidor para informações de VMs?", self.confirmaLoadedHostVMs)
 	def confirmaLoadedHostVMs(self):
-		self.rev.className="fa fa-hourglass"
+		# self.rev.className="fa fa-hourglass"
+		self.rev = 	html.I(Class="fa fa-hourglass")
 		self.sucessoLVMs = False
 		if len(self.ips)<=0:
 			Alerta("IP não cadastrado","Erro")
@@ -342,15 +343,19 @@ class EstadoVM(html.DIV):
 			Alerta("ERRO: " + vmstatus["MSG"],"Erro")
 			return
 		self.sucessoLVMs = True
+
 		liall = set( vmstatus["all"])
 		lirvmall= []
 		for vmreg in self.vms:
 			lirvmall.append(vmreg["nome"])
 		rvmall = set(lirvmall)
-
+		
 		if (rvmall - liall):
 			Alerta(	"Registradas e não definidos "+str(rvmall - liall ))
+		else:
+			Alerta(	"Todos registrados"+str(rvmall)+"---"+str(liall) )
 
+	def COMENTA(self):
 		for rvm in self.vms:
 			if rvm["estado"]!="1" and rvm["nome"] in vmstatus["on"]:
 					ajax.post("/hosts/%s/status/on"%(rvm["id"]), oncomplete=self.statusChangeResult)
@@ -524,13 +529,13 @@ class ListaInterfaces(html.DIV):
 
 		self.hostnode.cposo.setavalor(req.json["so"])
 		self.hostnode.n.setavalor(req.json["n"])
-		self.hostnode.cpu.setavalor(req.json["proc"])
+		self.hostnode.cpu.setavalor(req.json["cpu"])
 		self.hostnode.mem.setavalor(req.json["mem"])
 
 
-		if req.json["error"]=="":
+		if req.json["STATUS"]!="OK":
 			Alerta(req.json["out"].strip())
-		else: Alerta(req.json["error"])
+		else: Alerta(req.json["STATUS"])
 
 class AddNet(html.DIV):
 	def __init__(self,loc):
