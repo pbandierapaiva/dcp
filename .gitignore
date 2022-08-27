@@ -1,0 +1,8 @@
+conexao.py
+data/*
+venv
+brython*
+*~
+.~*
+output*
+_*
