@@ -8,45 +8,6 @@ from utils import *
 
 import json
 
-
-# class HostList(html.DIV):
-# 	def __init__(self, refreshState=False):
-# 		html.DIV.__init__(self)
-# 		ajax.get("/hosts", oncomplete=self.onLoadHosts)
-# 		self.refreshState = refreshState
-# 		self.className = "w3-sidebar w3-light-grey w3-bar-block"
-# 		self.style={"width":"25%"}
-# 		titulo = html.H3("Hosts")
-# 		titulo.className = "w3-bar-item"
-# 		self <= titulo
-
-# 		vmButton = html.DIV("Lista VM Hosts", Class="w3-btn w3-block")
-# 		vmButton.bind("click",self.vmlist)
-# 		self <= vmButton
-# 	def onLoadHosts(self, req):
-# 		for h in req.json:
-# 			self <= HostLine(h)
-# 	def vmlist(self,ev):
-# 		document["infoarea"].innerHTML=""
-# 		document["infoarea"] <= VMHostList()
-# class VMHostList(html.DIV):
-# 	def __init__(self):
-# 		html.DIV.__init__(self)
-# 		Confirma("Certeza que deseja listar todos os hosts?", self.refresh)
-
-# 	def refresh(self):
-# 		ajax.get("/hosts", oncomplete=self.onLoadHosts)
-
-# 	def onLoadHosts(self, req):
-# 		for h in req.json:
-# 			linhaHost = html.DIV()
-# 			linhaHost.className = "w3-bar w3-block"
-# 			self <= HostLine(h)  #html.P(h["nome"])
-
-# 			if h["tipo"]!="H":
-# 				next
-# 			self <= EstadoVM(h)
-
 class HostLine(html.DIV):
 	def __init__(self, h, refreshState=False):
 		html.DIV.__init__(self, Class= "w3-bar w3-block")
@@ -67,13 +28,13 @@ class HostLine(html.DIV):
 			botaoIpmi.className = self.cssBotao
 			botaoIpmi.classList.add("w3-teal")
 			botaoIpmi.target="_blank"
-			for n in h["redes"]:
-				if h["redes"][n] == "ipmi":
-					botaoIpmi.href = "http://"+n
+			for ipn in h["redes"]:
+				if h["redes"][ipn] == "ipmi":
+					botaoIpmi.href = "http://"+ipn
 					break
 			botContain <= botaoIpmi \
 				<= html.DIV(Class="w3-dropdown-content w3-bar-block w3-border") \
-				<= html.SPAN(n,Class="w3-bar-item w3-button")
+				<= html.SPAN(ipn,Class="w3-bar-item w3-button")
 		else:
 			botaoIpmi = html.A("VM")
 			botaoIpmi.className = self.cssBotao
@@ -92,7 +53,6 @@ class HostLine(html.DIV):
 		if h["estado"]=="0": self.estadoHost.classList.add("w3-grey")
 		elif h["estado"]=="1": self.estadoHost.classList.add("w3-green")
 		else: self.estadoHost.classList.add("w3-yellow")
-
 		self.estadoHost.bind("click",self.refrescastat)
 
 		self <= botaoHost
@@ -292,8 +252,18 @@ class NodeInfoLine(html.DIV):
 
 class EstadoVM(html.DIV):
 	def __init__(self, hostinfo):
-		html.DIV.__init__(self, Class="w3-container w3-margin")
+		html.DIV.__init__(self, Class="w3-container")
 		self.hostid = hostinfo["id"]
+		self.painel = html.DIV(Class="w3-card-4")
+		self.cabeca = html.H3(Class="w3-container w3-blue")
+		self.cabeca.innerHTML = str(hostinfo["id"]) +" - "+hostinfo["nome"]
+		self.rev = html.DIV(Class="fa fa-refresh w3-right w3-cell-middle")
+		# self.rev = html.DIV(Class="w3-container w3-margin w3-ripple fa fa-refresh w3-right")
+		self.rev.bind("click",self.refreshHostVMs)
+		self.cabeca <= self.rev
+		self.painel <= self.cabeca
+		self <= self.painel
+		
 		self.ip = ""
 		self.ips = []
 		for n in hostinfo["redes"]:
@@ -317,14 +287,11 @@ class EstadoVM(html.DIV):
 		self.vms = res.json
 		for vm in self.vms:
 			if vm["estado"]=='1':
-				self <= NodeInfoLine(vm)
+				self.painel <= NodeInfoLine(vm)
 		for vm in self.vms:
 			if vm["estado"]!='1':
-				self <= NodeInfoLine(vm)
-		self.rev = html.DIV(Class="w3-container w3-margin w3-ripple fa fa-refresh")
-		# self.rev <=	html.I(Class="fa fa-refresh")
-		self.rev.bind("click",self.refreshHostVMs)
-		self <= self.rev
+				self.painel <= NodeInfoLine(vm)
+		self <= self.painel
 	def refreshHostVMs(self, req):
 		Confirma("Conectar ao servidor para informações de VMs?", self.confirmaLoadedHostVMs)
 	def confirmaLoadedHostVMs(self):
