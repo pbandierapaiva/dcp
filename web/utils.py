@@ -31,7 +31,7 @@ class Alerta(html.DIV):
 		self.style.display='block'
 	def setmsg	(self, msg):
 		self.mensagem.innerHTML = msg
-	def dismiss(self,ev):
+	def dismiss(self,ev=0):
 		self.style.display='none'
 
 class PegaTexto(Alerta):

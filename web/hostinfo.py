@@ -335,7 +335,7 @@ class EstadoVM(html.DIV):
 			Alerta("IP não cadastrado","Erro")
 			return
 		for ip in self.ips:
-			Alerta("Checando IP: "+ip)
+			self.checandoIP = Alerta("Checando IP: "+ip)
 			ajax.get("/vmhosts/%s"%ip, oncomplete=self.loadedHostVMs)
 	def loadedHostVMs(self, req):
 		vmstatus = req.json
@@ -343,35 +343,35 @@ class EstadoVM(html.DIV):
 			Alerta("ERRO: " + vmstatus["MSG"],"Erro")
 			return
 		self.sucessoLVMs = True
+		self.checandoIP.dismiss()
+		todosReal =  set( vmstatus["all"] )
+		# Confirma(str(todosReal),self.COMENTA)
+		for vmr in todosReal:
+			if vmr in vmstatus["on"]: estado="1"
+			elif vmr in vmstatus["off"]: estado="0"
+			else: estado="-1"	
+			registered = False
+			for vmreg in self.vms:
+				if vmr == vmreg["nome"]:
+					registered=True
+					break		
+			if not registered:
+				# Confirma(vmr + " não definida no DB. Deseja definir?", self.COMENTA)
+				d = {"nome":vmr, "tipo":"V", 
+					"hospedeiro":self.hostid, 
+					"comentario":"detectado",
+					"estado": estado}
+				ajax.put("/vm/", data=json.dumps(d), oncomplete=self.vmAdded, headers={"Content-Type": "application/json; charset=utf-8"})
+			else:
+				for vmreg in self.vms:
+					if vmreg["nome"]==vmr:
+						if estado != vmreg["estado"]:
+							ajax.post("/hosts/%s/status/%s"%(vmreg["id"],estado), oncomplete=self.statusChangeResult)
 
-		liall = set( vmstatus["all"])
-		lirvmall= []
+				
 		for vmreg in self.vms:
-			lirvmall.append(vmreg["nome"])
-		rvmall = set(lirvmall)
-		
-		if (rvmall - liall):
-			Alerta(	"Registradas e não definidos "+str(rvmall - liall ))
-		else:
-			Alerta(	"Todos registrados"+str(rvmall)+"---"+str(liall) )
-
-	def COMENTA(self):
-		for rvm in self.vms:
-			if rvm["estado"]!="1" and rvm["nome"] in vmstatus["on"]:
-					ajax.post("/hosts/%s/status/on"%(rvm["id"]), oncomplete=self.statusChangeResult)
-			if rvm["estado"]!="0" and rvm["nome"] in vmstatus["off"]:
-					ajax.post("/hosts/%s/status/off"%(rvm["id"]), oncomplete=self.statusChangeResult)
-			if rvm["estado"]!="-1" and rvm["nome"] in vmstatus["other"]:
-					ajax.post("/hosts/%s/status/other"%(rvm["id"]), oncomplete=self.statusChangeResult)
-
-		adefinir = liall - rvmall
-		for n in adefinir: # máquinas definidas nos servidores mas não no BD
-			d = {"nome":n, "tipo":"V", "hospedeiro":self.hostid}
-			if n in vmstatus["on"]: d["estado"]="1"
-			elif n in vmstatus["off"]: d["estado"]="0"
-			else: d["estado"]="-1"
-			ajax.put("/vm/", data=json.dumps(d), oncomplete=self.vmAdded, headers={"Content-Type": "application/json; charset=utf-8"})
-
+			if vmreg["nome"] not in vmstatus["all"]:
+				ajax.delete("/vm/%d/%s"%(self.hostid,vmreg["nome"]))
 		self.refresh()
 	def statusChangeResult(self, res):
 		Alerta(res.json)
@@ -387,12 +387,14 @@ class EstadoVM(html.DIV):
 			elif vm in self.estado["off"]: d["estado"]="0"
 			else: d["estado"]="-1"
 			ajax.put("/vm/", data=json.dumps(d), oncomplete=self.vmAdded, headers={"Content-Type": "application/json; charset=utf-8"})
+	
 	def vmAdded(self, req):
-		if not 'STATUS' in req.json:
-			Alerta(str(req.json))
-			return
-		if req.json["STATUS"]!="OK":
-			Alerta(req.json["STATUS"])
+		pass
+		# if not 'STATUS' in req.json:
+		# 	Alerta(str(req.json))
+		# 	return
+		# # if req.json["STATUS"]!="OK":
+		# 	Alerta(req.json["STATUS"])
 
 class TipoHost(html.DIV):
 	def __init__(self, h, mini=False):

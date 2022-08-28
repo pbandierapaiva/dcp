@@ -39,7 +39,7 @@ class NetDev(BaseModel):
 class HostInfo(BaseModel):
 	hostid:Optional[int]
 	nome: str
-	comentario: str
+	comentario: Optional[str]
 	estado: str
 	tipo: Optional[str]
 	hospedeiro: Optional[int]
@@ -157,11 +157,11 @@ async def hostinfoPowerStatus(hostid,estado):
 
 @app.post("/hosts/{host_id}/status/{status}")
 async def estadoHost(host_id, status):
-	if status not in ["on","off","other"]:
+	if status not in ["on","off","other","1","0","-1"]:
 		return JSONResponse(content=jsonable_encoder({"STATUS":"ERROR","MSG":"Status not on or off"}))
-	if status=="on":
+	if status=="on" or status=="1":
 		s="1"
-	elif status=="off":
+	elif status=="off" or status=="0":
 		s="0"
 	else: s = "-1"
 	sql = "UPDATE maq SET estado='%s' WHERE id=%s"%(s,host_id)
@@ -407,3 +407,10 @@ async def criaVM(i: HostInfo):
 	except:
 		return JSONResponse(content=jsonable_encoder({"STATUS":'ERROR: inserting into database'}))
 	return JSONResponse(content=jsonable_encoder({"data":i.hostid, "STATUS":"OK"}))
+
+@app.delete("/vm/{hostid}/{vmname}", status_code=204)
+def delete_vm(hostid:int, vmname: str) -> None:
+	cmddel = "DELETE FROM maq WHERE hospedeiro=%d AND nome='%s' "%(hostid,vmname)
+	db = DB()
+	status = db.cursor.execute(cmddel)
+	db.commit()
