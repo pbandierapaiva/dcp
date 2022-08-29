@@ -5,7 +5,7 @@ Como fiz para colocar no ar:
   git clone https://github.com/pbandierapaiva/dcp
   cd dcp/
 
-  virtualenv hostapi
+  virtualenv venv 
 ou
   python -m venv venv
 
@@ -14,5 +14,7 @@ ou
 
 Se já tiver o ambiente, basta
 
-	source venv/bin/activate
-	uvicorn hostapi:app --reload
+$ source venv/bin/activate
+$ uvicorn hostapi:app --reload
+ou
+$ uvicorn hostapi:app --reload --host 0.0.0.0

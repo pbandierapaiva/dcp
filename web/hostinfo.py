@@ -103,8 +103,12 @@ class NodeInfo(html.DIV):
 		html.DIV.__init__(self)
 		document["infoarea"].innerHTML=""
 		document["infoarea"] <= self
+
+		
 		if type(h)==int:
-			ajax.get("/hosts/"+str(h), oncomplete=self.onLoadInfo)
+			self.loc = "/hosts/"+str(h)
+			self.refresh()
+			# ajax.get(self.loc, oncomplete=self.onLoadInfo)
 			self.clear()
 		else:
 			Alerta("Esse objeto não suporta mais não inteiros")
@@ -129,6 +133,7 @@ class NodeInfo(html.DIV):
 		# tit = document["hititle"]
 		# tit.innerHTML = "Host info: "+self.dadoshost["nome"]
 		self.dadoshost = req.json
+
 		form = html.FORM()
 		form.className = "w3-container"
 		titulo = html.LABEL("<h2>ID: "+str(self.dadoshost["id"])+" - "+self.dadoshost["nome"]+"</n2>")
@@ -175,10 +180,38 @@ class NodeInfo(html.DIV):
 		form.append(self.editBtn)
 		form.append(self.cancelBtn)
 
-		self.appendChild(form)
+		# self.appendChild(form)
+		# if self.dadoshost["tipo"]=="H":
+		# 	# self <= html.H3("Máquinas virtuais")
+		# 	self.appendChild(EstadoVM(self.dadoshost))
+
+		barra = html.DIV(Class="w3-bar w3-blue")
+		mInfo = html.BUTTON("Info", Class="w3-bar-item w3-button")
+		mInfo.bind("click",self.showInfo)
+		self.mVm = html.BUTTON("VM", Class="w3-bar-item w3-button")
+		self.mVm.bind("click",self.showVm)
+		barra <= mInfo
+		barra <= self.mVm
+
+		self.divInfo = html.DIV()
+		self.divInfo <= form
+		self.divVm = html.DIV()
+		self.divVm.style =  {"display":"none"}
 		if self.dadoshost["tipo"]=="H":
-			self <= html.H3("Máquinas virtuais")
-			self.appendChild(EstadoVM(self.dadoshost))
+			self.divVm <= EstadoVM(self.dadoshost)
+		else:
+			self.mVm.style =  {"display":"none"}
+
+		self <= barra 
+		self <= self.divInfo
+		self <= self.divVm
+	def showInfo(self,ev):
+		self.divVm.style =  {"display":"none"}
+		self.divInfo.style  =  {"display":"block"}
+	def showVm(self,ev):
+		self.divVm.style =  {"display":"block"}
+		self.divInfo .style =  {"display":"none"}	
+
 	def editar(self, ev):
 		self.nome.enable()
 		self.comentario.enable()
