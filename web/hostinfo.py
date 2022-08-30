@@ -103,37 +103,45 @@ class NodeInfo(html.DIV):
 		html.DIV.__init__(self)
 		document["infoarea"].innerHTML=""
 		document["infoarea"] <= self
-
-		
 		if type(h)==int:
 			self.loc = "/hosts/"+str(h)
 			self.refresh()
-			# ajax.get(self.loc, oncomplete=self.onLoadInfo)
 			self.clear()
 		else:
 			Alerta("Esse objeto não suporta mais não inteiros")
-	# 	if type(h)==int:
-	# 		self.hostid = h
-	# 		self.loc = "/hosts/"+str(h)
-	# 		self.carrega()
-	# 	else:
-	# 		self.hostid = h["id"]
-	# 		self.loc = "/hosts/"+str(h["id"])
-	# 		self.onLoadInfo(h)
 	def refresh(self):
 	 	ajax.get(self.loc, oncomplete=self.onLoadInfo)
 	 	self.clear()
 	def onLoadInfo(self, req):
-		# if type(req)==dict:
-		# 	self.dadoshost=req
-		# else:
-			# self.dadoshost = req.json
+		barra = html.DIV(Class="w3-bar w3-blue")
+		mInfo = html.BUTTON("Info", Class="w3-bar-item w3-button")
+		mInfo.bind("click",self.showInfo)
+		self.mVm = html.BUTTON("VM", Class="w3-bar-item w3-button")
+		self.mVm.bind("click",self.showVm)
+		barra <= mInfo
+		barra <= self.mVm
+		self.divInfo = NodeInfoForm(req)
+		self.divVm = EstadoVM(req.json)
+		self.divVm.style =  {"display":"none"}
+		self.mVm.innerHTML = self.divVm.titulo()
+		self <= barra 
+		self <= self.divInfo
+		self <= self.divVm
+	def showInfo(self,ev):
+		self.divVm.style =  {"display":"none"}
+		self.divInfo.style  =  {"display":"block"}
+	def showVm(self,ev):
+		self.divVm.style =  {"display":"block"}
+		self.divInfo .style =  {"display":"none"}	
 
-		#
-		# tit = document["hititle"]
-		# tit.innerHTML = "Host info: "+self.dadoshost["nome"]
-		self.dadoshost = req.json
 
+class NodeInfoForm(html.DIV):
+	def __init__(self, hinfodic):
+		html.DIV.__init__(self, Class="w3-card w3-margin") #, style={"width":"40%"})
+		self.showForm(hinfodic)
+	def showForm(self, hinfodic):
+		self.dadoshost = hinfodic.json
+		self.hostid = self.dadoshost["id"]
 		form = html.FORM()
 		form.className = "w3-container"
 		titulo = html.LABEL("<h2>ID: "+str(self.dadoshost["id"])+" - "+self.dadoshost["nome"]+"</n2>")
@@ -179,39 +187,7 @@ class NodeInfo(html.DIV):
 		self.cancelBtn.style = {"display":"none"}
 		form.append(self.editBtn)
 		form.append(self.cancelBtn)
-
-		# self.appendChild(form)
-		# if self.dadoshost["tipo"]=="H":
-		# 	# self <= html.H3("Máquinas virtuais")
-		# 	self.appendChild(EstadoVM(self.dadoshost))
-
-		barra = html.DIV(Class="w3-bar w3-blue")
-		mInfo = html.BUTTON("Info", Class="w3-bar-item w3-button")
-		mInfo.bind("click",self.showInfo)
-		self.mVm = html.BUTTON("VM", Class="w3-bar-item w3-button")
-		self.mVm.bind("click",self.showVm)
-		barra <= mInfo
-		barra <= self.mVm
-
-		self.divInfo = html.DIV()
-		self.divInfo <= form
-		self.divVm = html.DIV()
-		self.divVm.style =  {"display":"none"}
-		if self.dadoshost["tipo"]=="H":
-			self.divVm <= EstadoVM(self.dadoshost)
-		else:
-			self.mVm.style =  {"display":"none"}
-
-		self <= barra 
-		self <= self.divInfo
-		self <= self.divVm
-	def showInfo(self,ev):
-		self.divVm.style =  {"display":"none"}
-		self.divInfo.style  =  {"display":"block"}
-	def showVm(self,ev):
-		self.divVm.style =  {"display":"block"}
-		self.divInfo .style =  {"display":"none"}	
-
+		self <= form
 	def editar(self, ev):
 		self.nome.enable()
 		self.comentario.enable()
@@ -220,16 +196,15 @@ class NodeInfo(html.DIV):
 		self.cpu.enable()
 		self.n.enable()
 		self.mem.enable()
-
 		self.estado.enable()
-		# self.tipo.disabled = False
 		self.tipo.enableEdit()
 		self.listaInt.enableEdit()
-
 		self.editBtn.innerHTML = "Salvar"
 		self.editBtn.unbind("click")
 		self.editBtn.bind("click", self.salvar)
 		self.cancelBtn.style = {"display":"block"}
+	def cancelar(self, ev):
+		self.refresh()
 	def alterado(self):
 		return self.nome.alterado or self.comentario.alterado or self.cposo.alterado or self.kernel.alterado or self.cpu.alterado or self.n.alterado or \
 			self.mem.alterado or self.estado.alterado
@@ -258,12 +233,9 @@ class NodeInfo(html.DIV):
 		if req.json["STATUS"]!="OK":
 			Alerta("Erro de atualização de Host","Erro")
 		self.refresh()
-	def cancelar(self, ev):
-		if self.alterado():
-			if confirm("Descartar alterações?"):
-				self.refresh()
-		else:
-			self.refresh()
+	def refresh(self):
+	 	ajax.get("/hosts/%d"%(self.hostid), oncomplete=self.showForm)
+	 	self.clear()
 
 class NodeInfoLine(html.DIV):
 	def __init__(self, hinfodic):
@@ -286,30 +258,27 @@ class NodeInfoLine(html.DIV):
 class EstadoVM(html.DIV):
 	def __init__(self, hostinfo):
 		html.DIV.__init__(self, Class="w3-container")
+		self.nvms=0
+		if hostinfo["tipo"]!="H":
+			self.nvms=-1
+			return
 		self.hostid = hostinfo["id"]
 		self.painel = html.DIV(Class="w3-card-4")
 		self.cabeca = html.H3(Class="w3-container w3-blue")
 		self.cabeca.innerHTML = str(hostinfo["id"]) +" - "+hostinfo["nome"]
 		self.rev = html.DIV(Class="fa fa-refresh w3-right w3-cell-middle")
-		# self.rev = html.DIV(Class="w3-container w3-margin w3-ripple fa fa-refresh w3-right")
 		self.rev.bind("click",self.refreshHostVMs)
+
 		self.cabeca <= self.rev
 		self.painel <= self.cabeca
 		self <= self.painel
-		
-		self.ip = ""
-		self.ips = []
-		for n in hostinfo["redes"]:
-			if hostinfo["redes"][n] != "ipmi":
-				self.ip = n
-				self.ips.append(n)
-
-		# anc = html.SPAN(hostinfo["nome"]+"("+str(hostinfo["id"])+")", Class="w3-ripple")
-		# anc.bind("click",self.homeHost)
-		# tit = html.DIV()
-		# tit.innerHTML = "VMs on host: "
-		# tit <= anc
+		self.redes = hostinfo["redes"]
 		self.refresh()
+	def titulo(self):
+		if self.nvms==-1:
+			return "Standalone"
+		else:
+			return "VM - "+str(self.nvms)
 	def homeHost(self,ev):
 		document["infoarea"].innerHTML=""
 		document["infoarea"] <= NodeInfo(self.hostid)
@@ -318,6 +287,8 @@ class EstadoVM(html.DIV):
 		ajax.get("/hosts/%s/vm"%self.hostid, oncomplete=self.onLoadRegisteredVMs)
 	def onLoadRegisteredVMs(self,res):
 		self.vms = res.json
+		self.nvms = len(self.vms)	
+		# Alerta(self.nvms)
 		for vm in self.vms:
 			if vm["estado"]=='1':
 				self.painel <= NodeInfoLine(vm)
@@ -331,6 +302,12 @@ class EstadoVM(html.DIV):
 		# self.rev.className="fa fa-hourglass"
 		self.rev = 	html.I(Class="fa fa-hourglass")
 		self.sucessoLVMs = False
+		self.ip = ""
+		self.ips = []
+		for n in self.redes:
+			if self.redes[n] != "ipmi":
+				self.ip = n
+				self.ips.append(n)
 		if len(self.ips)<=0:
 			Alerta("IP não cadastrado","Erro")
 			return
