@@ -113,6 +113,7 @@ class NodeInfo(html.DIV):
 	 	ajax.get(self.loc, oncomplete=self.onLoadInfo)
 	 	self.clear()
 	def onLoadInfo(self, req):
+		hostdic = req.json
 		barra = html.DIV(Class="w3-bar w3-blue")
 		mInfo = html.BUTTON("Info", Class="w3-bar-item w3-button")
 		mInfo.bind("click",self.showInfo)
@@ -122,15 +123,19 @@ class NodeInfo(html.DIV):
 		barra <= self.mVm
 		self.divInfo = NodeInfoForm(req)
 		self.divVm = EstadoVM(req.json)
-		self.divVm.style =  {"display":"none"}
+		if hostdic["tipo"]=='H':
+			self.showVm()
+		else:
+			self.showInfo()
+		# self.divVm.style =  {"display":"none"}
 		self.mVm.innerHTML = self.divVm.titulo()
 		self <= barra 
 		self <= self.divInfo
 		self <= self.divVm
-	def showInfo(self,ev):
+	def showInfo(self,ev=0):
 		self.divVm.style =  {"display":"none"}
 		self.divInfo.style  =  {"display":"block"}
-	def showVm(self,ev):
+	def showVm(self,ev=0):
 		self.divVm.style =  {"display":"block"}
 		self.divInfo .style =  {"display":"none"}	
 
