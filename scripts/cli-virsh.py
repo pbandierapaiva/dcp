@@ -24,38 +24,73 @@ def allHosts():
 
 	# somente Hosts que não são VMs 'V'
 	# db.cursor.execute("Select id,nome,estado,tipo,cpu,n,mem from maq where tipo!='V'")
-	db.cursor.execute("Select id,nome,estado,tipo,cpu,n,mem from maq where tipo='H'")
+	db.cursor.execute("Select id,nome,estado,tipo,cpu,n,mem from maq where tipo='H' and estado='1'")
 	todoshostsdb = db.cursor.fetchall()
 
 	contavm = 0
 
 	d = []
 	for li in todoshostsdb:
-		print("\n",li, file=output)
+	
 		db.cursor.execute("SELECT ip,rede FROM netdev WHERE maq='%s'"%li['id'])
 		allIf =  db.cursor.fetchall()
-		ifes={}
-		for iface in allIf:
-			ifes[iface['rede']]=iface['ip']
 
-		print("IPMI: ",ifes['ipmi'],"\n",ifes,"\n\n", file=output)
-		for rede in ifes:
-			if rede!='ipmi':
-				print(ifes[rede], file=output)
-				if( fetchVMs( ifes[rede]) ): break
+		print(li["nome"])
+		for iface in allIf:
+			if iface["rede"]!="ipmi":
+				print(iface["ip"])
+				vms = fetchVMs( iface["ip"]) 
+				if vms==None: continue
+				else: 
+					sqldel = "DELETE FROM maq WHERE hospedeiro=%s"%li['id']
+					db.cursor.execute(sqldel)
+					# print(sqldel)
+					for vm in vms:
+						if 'port' in vm["graph"]:
+							# print(vm["graph"]["port"])
+							portavnc = vm["graph"]["port"]
+						else:
+							portavnc = '0'
+						sqlins = """
+						INSERT INTO maq (nome,estado,tipo,hospedeiro,vncport,mem,n)
+						VALUES ('%s','%s','V','%s',%s,%s,%s)
+						"""%(vm["nome"],vm["ligada"],li['id'],portavnc,vm["mem"],vm["cpu"])
+						db.cursor.execute(sqlins)
+						# print(sqlins)
+					break
+		db.commit()
+
 	print("Operação concluída")
 
 def fetchVMs(ip):
-	status=False
-
 	try:
 		conn = libvirt.open(f'qemu+ssh://root@{ip}/system') #,auth,0)
 	except libvirt.libvirtError as e:
 		print(repr(e),file=sys.stderr)
-		return status
-	status = True
-	for d in conn.listAllDomains():  #libvirt.VIR_CONNECT_LIST_DOMAINS_ACTIVE):
-		print(d.name(), d.isActive(), d.isPersistent(), file=output)
+		return None
+
+	vms=[]
+	for d in conn.listAllDomains():  #libvconn.listAllDomains()irt.VIR_CONNECT_LIST_DOMAINS_ACTIVE):
+		maq= {"nome":d.name(), "ligada":d.isActive(), "persistente": d.isPersistent()}
+
+		# print("\t", d.name(), d.isActive(), d.isPersistent())
+		raiz = ET.fromstring(d.XMLDesc())
+		el = raiz.find('currentMemory')
+		if el!=None:
+			maq["mem"] =  el.text
+			# print('\t\tMem: ', el.text)
+		el = raiz.find('vcpu')
+		if el!=None: 
+			maq["cpu"]= el.text
+			# print('\t\tCPUs: ', el.text)
+		el = raiz.find('vcpu')
+		devs = raiz.find('devices').find('graphics').attrib
+		maq["graph"] = devs
+		vms.append(maq)
+		continue
+
+		# print(d.name(), d.isActive(), d.isPersistent(), file=output)
+		
 		raiz= ET.fromstring(d.XMLDesc())
 		for el in raiz:
 			if el.tag=='devices':
@@ -65,7 +100,8 @@ def fetchVMs(ip):
 							if el3.tag=='mac':
 								print("\t",el3.attrib['address'], file=output)
 	output.flush()
-	return status
+
+	return vms
 
 output=open("output.log","w+")
 

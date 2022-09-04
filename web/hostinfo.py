@@ -275,7 +275,8 @@ class EstadoVM(html.DIV):
 		self.rev.bind("click",self.refreshHostVMs)
 
 		self.cabeca <= self.rev
-		self.painel <= self.cabeca
+		self.painel <= self.cabeca		
+		self.painel <=HostLine(hostinfo)
 		self <= self.painel
 		self.redes = hostinfo["redes"]
 		self.refresh()

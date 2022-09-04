@@ -1,6 +1,6 @@
 #!bin/python
 #
-# Conecta em todas as máquinas físicas marcadas como Host e resgata VMs e seus estados
+# Conecta em todas as máquinas físicas marcadas como Host e resgata seus estados
 #
 
 import mariadb
@@ -19,10 +19,10 @@ class DB:
 		self.con.commit()
 
 def allHosts():
-	db = DB()
-
 	# verifica status (ON/OFF) somente Hosts que não são VMs 'V'
 	# db.cursor.execute("Select id,nome,estado,tipo,cpu,n,mem from maq where tipo!='V'")
+	db = DB()
+
 	db.cursor.execute("Select id,nome,estado,tipo,cpu,n,mem from maq where tipo!='V'")
 	todoshostsdb = db.cursor.fetchall()
 
@@ -63,55 +63,6 @@ def allHosts():
 
 		if status!="1":
 			continue
-		# continue
-
-		# for ip in li['redes']:
-		# 	ret = hostinfo(ip,hostid)
-		# 	if ret['STATUS']=="OK":
-		# 		ipsucesso=ip
-		# 		hostOK=True
-		# 		break
-		#
-		# if not hostOK:
-		# 	print("Problemas com host: ",li)
-		# 	continue
-		#
-		# updcmd = """UPDATE maq SET cpu='%s', n=%d, mem='%s', kernel='%s', so='%s'
-		# 		WHERE id='%s'
-		# """%(ret["cpu"],ret["n"],ret["mem"],ret["kernel"],ret["so"],hostid)
-		#
-		# try:
-		# 	status = db.cursor.execute(updcmd)
-		# except:
-		# 	print("Erro atualização de BD >>"+updcmd)
-		# 	input("Pausado...")
-		# db.commit()
-
-		# selcmd = "SELECT * FROM maq WHERE hospedeiro='%s'"%hostid
-		# db.cursor.execute(selcmd)
-		# vms = db.cursor.fetchall()
-		#
-		# for vm in vms:
-		# 	if vm["nome"] not in ret["all"]:
-		# 		input("\t*** VM NOVA encontrada: %s %s"%(vm["nome"],vm["id"]))
-		# 		# sql = "UPDATE maq SET estado='%s' WHERE id=%s"%(vm["estado"],vm["id"])
-		# 		sql = """INSERT INTO maq (nome, estado, tipo, hospedeiro) VALUES ('%s','%s','%s','%s')
-		# 			"""%(vm["nome"],vm["estado"],vm["tipo"],hostid)
-		# 		db.cursor.execute(selcmd)
-		# 		db.commit()
-		#
-		# 	if (vm["estado"]=='0' and vm["nome"] not in ret["off"] ) or \
-		# 		(vm["estado"]=='1' and vm["nome"] not in ret["on"] ) or \
-		# 		(vm["estado"]=='-1' and vm["nome"] not in ret["other"] ):
-		# 		input("\t*** Estado alterado VM:  %s %s ( %s )"%(vm["nome"],vm["id"],vm["estado"]))
-		#
-		# 		sql = "UPDATE maq SET estado='%s' WHERE id=%s"%(vm["estado"],vm["id"])
-		# 		db.cursor.execute(selcmd)
-		# 		db.commit()
-		#
-		#
-		# 	print("VM "+vm["nome"] + " Ok")
-
 
 def ipmiInfo(ip,altsec=rootpw):
 	print("\tIPMI "+ip)
