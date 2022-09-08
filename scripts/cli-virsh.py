@@ -1,6 +1,6 @@
 #!bin/python
 ##
-## Utiliza libvirt para acessar dados de guests
+## Utiliza libvirt para acessar dados de VMs rodando em todos os hosts ligados
 ##
 
 import libvirt

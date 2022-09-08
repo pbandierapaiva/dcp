@@ -1,5 +1,5 @@
-#
-# Conecta em todas as máquinas físicas marcadas como Host e resgata VMs e seus estados
+# NÃO UTILIZE ESTE cli-host-status.py
+# Conecta em todas as máquinas físicas marcadas como Hostpega estado ligada/desligada
 #
 
 import mariadb
@@ -20,8 +20,6 @@ class DB:
 def allHosts():
 	db = DB()
 
-	# somente Hosts que não são VMs 'V'
-	# db.cursor.execute("Select id,nome,estado,tipo,cpu,n,mem from maq where tipo!='V'")
 	db.cursor.execute("Select id,nome,estado,tipo,cpu,n,mem from maq where tipo!='V'")
 	todoshostsdb = db.cursor.fetchall()
 
@@ -40,7 +38,6 @@ def allHosts():
 
 		ipmi = ''
 		li['redes'] = []
-		# for iface in interfaces:
 		for hostline in hosts:
 			if hostline["rede"]=='ipmi':
 				ipmi = hostline["ip"]
@@ -54,7 +51,6 @@ def allHosts():
 		if hostline["estado"]!=status:
 			print("Status ALTERADO %s %s"%(hostid,status))
 			updcmd = "UPDATE maq SET estado='%s'	WHERE id='%s'"%(status,hostid)
-			# print(updcmd)
 			try:
 				status = db.cursor.execute(updcmd)
 			except:
