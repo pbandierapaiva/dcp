@@ -17,9 +17,7 @@ import subprocess
 from conexao import conexao, rootpw
 from paramiko.client import SSHClient, AutoAddPolicy
 
-
 app = FastAPI()
-
 
 app.mount("/web", StaticFiles(directory="web"), name="web")
 
@@ -53,7 +51,7 @@ class HostInfo(BaseModel):
 async def root():
     return RedirectResponse("/web/host.html")
 
-
+##  /hosts
 @app.get("/hosts")
 async def host():
 	db = DB()
@@ -145,6 +143,64 @@ async def hostinfoPowerStatus(hostid):
 	output = subprocess.run(executa, capture_output=True, text=True		)
 	return JSONResponse(content=jsonable_encoder(output))
 
+@app.get("/hosts/{hostid}/ambient")
+async def hostinfoPowerStatus(hostid):
+	db = DB()
+
+	db.cursor.execute("Select netdev.ip, maq.altsec from maq,netdev where maq.id=netdev.maq AND maq.id='"+hostid+"' AND netdev.rede='ipmi'")
+	h = db.cursor.fetchone()
+
+	if not h:
+		o = {"hostid":hostid,"STATUS":"ERRO", "msg":"Não encontrado no banco" }
+		return JSONResponse(content=jsonable_encoder(o))
+	ip = h["ip"]
+	print(ip)
+	if h["altsec"]:
+		executa = ['ipmitool','-c', '-I','lanplus','-H', ip, '-U', 'admin', '-P', h["altsec"], "sensor"] #, "get", "CPU1 Temp"]
+	else:
+		executa = ['ipmitool','-c', '-I','lanplus','-H', ip, '-U', 'admin', '-P', rootpw, "sensor"] #	, "get", "CPU1 Temp"]
+
+	out = subprocess.run(executa, capture_output=True)
+
+	o = {"hostid":hostid,"ip":ip}
+	if out.returncode==1:
+		o["STATUS"]='ERRO'
+		o["msg"]= out.stderr
+	else:
+		o["STATUS"]='OK'
+		od = {}
+		for it in out.stdout.decode().split("\n"):
+			parts = it.split(",")
+			if parts[0] == "CPU1 Temp":
+				if parts[1]!='na':
+					o["CPU_TEMP"] = float(parts[1])
+			if parts[0] == "System Temp":
+				if parts[1]!='na':
+					o["SYS_TEMP"] = float(parts[1])
+			if parts[0] == "Ambient Temp":
+				if parts[1]!='na':
+					o["AMBIENT"] = float(parts[1])
+			if parts[0] == 	"Inlet Temp":
+				if parts[1]!='na':
+					o["INLET"] = float(parts[1])
+			if parts[0] == 	"Exhaust Temp":
+				if parts[1]!='na':
+					o["EXHAUST"] = float(parts[1])
+			if parts[0] == 	"Temp":
+				if parts[1]!='na':
+					o["TEMP"] = float(parts[1])
+			# od[parts[0]]=parts[1:]
+		# o["msg"]= od  #output.stdout #.read()
+	# return mensagem
+	return JSONResponse(content=jsonable_encoder(o))
+
+@app.get("/hosts/{host_id}/vm")
+async def getVMInfo(host_id):
+	db = DB()
+	db.cursor.execute("Select * from maq where hospedeiro='"+host_id+"'")
+	h = db.cursor.fetchall()
+	return JSONResponse(content=jsonable_encoder(h))
+
 @app.put("/hosts/{hostid}/powerstatus/{estado}")
 async def hostinfoPowerStatus(hostid,estado):
 	db = DB()
@@ -186,39 +242,6 @@ async def tipoMaq(host_id, tipo):
 		return JSONResponse(content=jsonable_encoder({'STATUS':'ERROR', 'MSG':ex.args}))
 	return JSONResponse(content=jsonable_encoder({"STATUS":"OK"}))
 
-@app.get("/hosts/{hostid}/ambient")
-async def hostinfoPowerStatus(hostid):
-	db = DB()
-
-	db.cursor.execute("Select netdev.ip, maq.altsec from maq,netdev where maq.id=netdev.maq AND maq.id='"+hostid+"' AND netdev.rede='ipmi'")
-	h = db.cursor.fetchone()
-
-	if not h:
-		o = {"hostid":hostid,"STATUS":"ERRO", "msg":"Não encontrado no banco" }
-		return JSONResponse(content=jsonable_encoder(o))
-	ip = h["ip"]
-	if h["altsec"]:
-		executa = ['ipmitool','-c', '-I','lanplus','-H', ip, '-U', 'admin', '-P', h["altsec"], "sensor", "get", "'Ambient Temp'"]
-	else:
-		executa = ['ipmitool','-c', '-I','lanplus','-H', ip, '-U', 'admin', '-P', rootpw, "sensor", "get", "'Ambient Temp'"]
-
-	output = subprocess.Popen(executa)
-	#, capture_output=True, text=True,	timeout=180	)
-	output.wait(timeout=180)
-	o = {"hostid":hostid,"ip":ip}
-	if output.returncode==1:
-		o["STATUS"]='ERRO'
-		o["msg"]= output.stderr
-	else:
-		o["STATUS"]='OK'
-		mensagem="<pre>"
-		for i in output.stdout:
-			mensagem += str(output.stdout)
-		mensagem+="</pre>"
-		o["msg"]= mensagem
-	return mensagem
-	# return JSONResponse(content=jsonable_encoder(o))
-
 @app.post("/hosts/{host_id}")
 async def atualizaHost(item: HostInfo):
 		setexpression = " SET nome='%s',comentario='%s', estado='%s', tipo='%s', so='%s', kernel='%s', cpu='%s', n=%d, mem=%d "%\
@@ -259,6 +282,32 @@ async def listaNets():
 	db = DB()
 	db.cursor.execute("Select * from rede")
 	return JSONResponse(content=jsonable_encoder(db.cursor.fetchall()))
+
+@app.put("/netdev")
+async def criaNetDev( nd: NetDev):
+
+	ipValido = True
+	if not re.findall("\d+\.\d+\.\d+\.\d+", nd.ip):
+		ipValido=False
+	else:
+		for n in nd.ip.split('.'):
+			try:
+				if int(n)<0 or int(n)>254:
+					ipValido=False
+			except:
+				ipValido=False
+	if not ipValido:
+		return JSONResponse(content=jsonable_encoder({"STATUS":'ERROR: invalid address'}))
+	cmdins = "INSERT INTO netdev (ip,ether,rede,maq) VALUES ('%s','%s','%s',%d)"%(nd.ip,nd.ether,nd.rede,nd.maq)
+	db = DB()
+	try:
+		status = db.cursor.execute(cmdins)
+		db.commit()
+	except:
+		return JSONResponse(content=jsonable_encoder({"STATUS":'ERROR: duplicate IP'}))
+
+	# print(str(dir(db.cursor)))
+	return JSONResponse(content=jsonable_encoder({"STATUS":'OK'}))
 
 @app.delete("/netdev/{ip}", status_code=204)
 def delete_book(ip: str) -> None:
@@ -304,16 +353,6 @@ def vmhostlist(ip):
 	other = list( set(all) - (set(on)|set(off)))
 	return JSONResponse(content=jsonable_encoder({"on":on,"off":off, "all":all, "other":other, "STATUS":"OK", "MSG":err}))
 
-# @app.get("/vmhosts/{ip}/cmd/{cmd}")
-# async def executa(ip,cmd):
-# 	client = SSHClient()
-# 	client.set_missing_host_key_policy( AutoAddPolicy )
-# 	client.load_system_host_keys()
-# 	client.load_host_keys("/home/paiva/.ssh/known_hosts")
-# 	client.connect(ip,username='root',password=rootpw)
-# 	stdin, stdout, stderr = client.exec_command(cmd)
-# 	return JSONResponse(content=jsonable_encoder({"out":stdout.read(),"error":stderr.read()}))
-
 @app.get("/vmhosts/{ip}/release")
 async def catrelease(ip):
 	ret = {'so':'','kernel':'',"STATUS":'OK'}
@@ -350,39 +389,6 @@ async def catrelease(ip):
 		ret["STATUS"]+="CPU " + str( stderr.read() )
 	return JSONResponse(content=jsonable_encoder(ret))
 
-@app.put("/netdev")
-async def criaNetDev( nd: NetDev):
-
-	ipValido = True
-	if not re.findall("\d+\.\d+\.\d+\.\d+", nd.ip):
-		ipValido=False
-	else:
-		for n in nd.ip.split('.'):
-			try:
-				if int(n)<0 or int(n)>254:
-					ipValido=False
-			except:
-				ipValido=False
-	if not ipValido:
-		return JSONResponse(content=jsonable_encoder({"STATUS":'ERROR: invalid address'}))
-	cmdins = "INSERT INTO netdev (ip,ether,rede,maq) VALUES ('%s','%s','%s',%d)"%(nd.ip,nd.ether,nd.rede,nd.maq)
-	db = DB()
-	try:
-		status = db.cursor.execute(cmdins)
-		db.commit()
-	except:
-		return JSONResponse(content=jsonable_encoder({"STATUS":'ERROR: duplicate IP'}))
-
-	# print(str(dir(db.cursor)))
-	return JSONResponse(content=jsonable_encoder({"STATUS":'OK'}))
-
-@app.get("/hosts/{host_id}/vm")
-async def getVMInfo(host_id):
-	db = DB()
-	db.cursor.execute("Select * from maq where hospedeiro='"+host_id+"'")
-	h = db.cursor.fetchall()
-	return JSONResponse(content=jsonable_encoder(h))
-
 @app.get("/vm/{host_id}/{nome_vm}")
 async def getVM(nome_vm):
 		db = DB()
@@ -414,3 +420,4 @@ def delete_vm(hostid:int, vmname: str) -> None:
 	db = DB()
 	status = db.cursor.execute(cmddel)
 	db.commit()
+
