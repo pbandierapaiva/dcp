@@ -19,8 +19,6 @@ class DB:
 		self.con.commit()
 
 def allHosts():
-	# verifica status (ON/OFF) somente Hosts que não são VMs 'V'
-	# db.cursor.execute("Select id,nome,estado,tipo,cpu,n,mem from maq where tipo!='V'")
 	db = DB()
 
 	db.cursor.execute("Select id,nome,estado,tipo,cpu,n,mem from maq where tipo!='V'")
@@ -47,22 +45,17 @@ def allHosts():
 
 		if hostline["altsec"]:
 			status = ipmiInfo(ipmi, hostline["altsec"])
-			# print(ipmi, hostline["altsec"])
 		else: status = ipmiInfo(ipmi)
 
 		if hostline["estado"]!=status:
 			print("Status ALTERADO %s %s"%(hostid,status))
 			updcmd = "UPDATE maq SET estado='%s'	WHERE id='%s'"%(status,hostid)
-			# print(updcmd)
 			try:
 				status = db.cursor.execute(updcmd)
 			except:
 				input("Erro atualização de status no BD >>"+updcmd)
 
 			db.commit()
-
-		if status!="1":
-			continue
 
 def ipmiInfo(ip,altsec=rootpw):
 	print("\tIPMI "+ip)
