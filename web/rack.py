@@ -25,7 +25,9 @@ class Rack( html.DIV ):
 			self.hd[item["id"]]=item
 		self.carregaUnidades()
 	def carregaUnidades(self):
-		self <= Unidade(1, "RACK DC-Unifesp")
+		self <= Unidade(1, "Dataceter-Unifesp")
+		self <= Unidade(2,[Modulo(self.hd[558]),Modulo(self.hd[559]),Modulo(self.hd[560]),Modulo(self.hd[561])])
+		self <= Unidade(1, "DCP-DIS-Unifesp")
 		self <= Unidade(1, "RACK 1")
 		self <= Unidade(1, [Modulo(self.hd[525])])
 		self <= Unidade(1, [Modulo(self.hd[524])])
@@ -34,7 +36,6 @@ class Rack( html.DIV ):
 		self <= Unidade(1, [Modulo(self.hd[521])])
 		self <= Unidade(1, [Modulo(self.hd[567])])
 		self <= Unidade(1, "DISPLAY")
-		self <= Unidade(2,[Modulo(self.hd[558]),Modulo(self.hd[559]),Modulo(self.hd[560]),Modulo(self.hd[561])])
 		self <= Unidade(2, [Modulo(self.hd[563])])
 		self <= Unidade(2, [Modulo(self.hd[562])])
 		self <= Unidade(1, "Aruba-237")
