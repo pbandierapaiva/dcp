@@ -9,7 +9,8 @@ from fastapi.encoders import jsonable_encoder
 from fastapi.responses import JSONResponse
 from fastapi.responses import RedirectResponse
 
-import mariadb
+#import mariadb
+import mysql.connector as mariadb
 import re
 import os
 import subprocess
@@ -24,6 +25,7 @@ app.mount("/web", StaticFiles(directory="web"), name="web")
 class DB:
 	def __init__(self):
 		self.con= mariadb.connect(**conexao)
+		#self.con= mysqlconnector.connect(**conexao)
 		self.cursor= self.con.cursor(dictionary=True)
 	def commit(self):
 		self.con.commit()

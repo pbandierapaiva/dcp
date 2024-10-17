@@ -3,7 +3,8 @@
 # Conecta em todas as máquinas físicas marcadas como Host e resgata seus estados
 #
 
-import mariadb
+#import mariadb
+import mysql.connector as mariadb
 import re
 import os
 import subprocess

@@ -8,7 +8,9 @@ import sys
 # import xml
 import xml.etree.ElementTree as ET
 
-import mariadb
+#import mariadb
+import mysql.connector as mariadb
+
 from conexao import conexao, rootpw
 
 class DB:
