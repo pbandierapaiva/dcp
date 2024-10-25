@@ -9,6 +9,7 @@ from fastapi.encoders import jsonable_encoder
 from fastapi.responses import JSONResponse
 from fastapi.responses import RedirectResponse
 
+# driver mysql
 #import mariadb
 import mysql.connector as mariadb
 import re
