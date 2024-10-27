@@ -61,6 +61,7 @@ async def host():
 
 	# somente Hosts que não são VMs 'V'
 	db.cursor.execute("Select id,nome,comentario,estado,tipo,cpu,n,mem from maq where tipo!='V'")
+	# db.cursor.execute("Select id,nome,comentario,CONVERT(estado,CHAR)as estado,CONVERT(tipo,CHAR) as tipo,cpu,n,mem from maq where tipo!='V'")
 	tudo = db.cursor.fetchall()
 
 	d = []
@@ -290,7 +291,7 @@ async def listaNets():
 async def criaNetDev( nd: NetDev):
 
 	ipValido = True
-	if not re.findall("\d+\.\d+\.\d+\.\d+", nd.ip):
+	if not re.findall("\\d+\\.\\d+\\.\\d+\\.\\d+", nd.ip):
 		ipValido=False
 	else:
 		for n in nd.ip.split('.'):

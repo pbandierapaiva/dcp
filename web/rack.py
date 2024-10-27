@@ -94,12 +94,12 @@ class Modulo(html.DIV):
 	def refresh(self):
 		self.innerHTML = str(self.h["id"]) + " - " + self.h["nome"]
 		self.classList.add("w3-hover-blue")
-		if self.h["estado"]=='1':
-			if self.h["tipo"]=='H':
+		if self.h["estado"][0]=='1':
+			if self.h["tipo"][0]=='H':
 		    	self.classList.add("w3-blue")
 			else:
 				self.classList.add("w3-cyan")
-		elif  self.h["estado"]=='-1':
+		elif  self.h["estado"][0]=='-1':
 		    self.classList.add("w3-yellow")
 		self.bind("click", self.mostraHost)
 	def mostraHost(self,ev):

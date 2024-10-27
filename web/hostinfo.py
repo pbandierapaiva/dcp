@@ -23,7 +23,7 @@ class HostLine(html.DIV):
 		botaoHost.hostid =h["id"] # "/hosts/"+str(h["id"])
 
 		botContain = html.SPAN(Class= "w3-dropdown-hover")
-		if h["tipo"]!='V':
+		if h["tipo"][0]!='V':
 			botaoIpmi = html.A("IPMI")
 			botaoIpmi.className = self.cssBotao
 			botaoIpmi.classList.add("w3-teal")
@@ -50,8 +50,8 @@ class HostLine(html.DIV):
 		self.estadoHost.innerHTML = "&nbsp;"
 		self.estadoHost.className=self.cssBotao
 		self.estadoHost.style = {"width":"3%"}
-		if h["estado"]=="0": self.estadoHost.classList.add("w3-grey")
-		elif h["estado"]=="1": self.estadoHost.classList.add("w3-green")
+		if h["estado"][0]=="0": self.estadoHost.classList.add("w3-grey")
+		elif h["estado"][0]=="1": self.estadoHost.classList.add("w3-green")
 		else: self.estadoHost.classList.add("w3-yellow")
 		self.estadoHost.bind("click",self.refrescastat)
 
@@ -76,7 +76,7 @@ class HostLine(html.DIV):
 		else:
 			estadoText = "Ligado"
 
-		if d["power"]!=self.hostdic["estado"]:
+		if d["power"]!=self.hostdic["estado"][0]:
 			self.bloqueia.setmsg("Alterando status para: "+estadoText)
 			ajax.put("/hosts/%s/powerstatus/%s"%(self.hostdic["id"],d["power"]))
 			return
@@ -123,7 +123,7 @@ class NodeInfo(html.DIV):
 		barra <= self.mVm
 		self.divInfo = NodeInfoForm(req)
 		self.divVm = EstadoVM(req.json)
-		if hostdic["tipo"]=='H':
+		if hostdic["tipo"][0]=='H':
 			self.showVm()
 		else:
 			self.showInfo()
@@ -169,7 +169,7 @@ class NodeInfoForm(html.DIV):
 		cpulinha <= html.TD(style={"width":"20%"}) <= self.mem
 		form <= html.TABLE() <= cpulinha
 		self.tipo = TipoHost(self.dadoshost)
-		self.estado = RadioEstado(self.dadoshost["estado"])
+		self.estado = RadioEstado(self.dadoshost["estado"][0])
 
 		self.listaInt = ListaInterfaces( self ) # campos ) #self.loc, campos["redes"] )
 
@@ -264,7 +264,7 @@ class EstadoVM(html.DIV):
 	def __init__(self, hostinfo):
 		html.DIV.__init__(self, Class="w3-container")
 		self.nvms=0
-		if hostinfo["tipo"]!="H":
+		if hostinfo["tipo"][0]!="H":
 			self.nvms=-1
 			return
 		self.hostid = hostinfo["id"]
@@ -296,10 +296,10 @@ class EstadoVM(html.DIV):
 		self.nvms = len(self.vms)	
 		# Alerta(self.nvms)
 		for vm in self.vms:
-			if vm["estado"]=='1':
+			if vm["estado"][0]=='1':
 				self.painel <= NodeInfoLine(vm)
 		for vm in self.vms:
-			if vm["estado"]!='1':
+			if vm["estado"][0]!='1':
 				self.painel <= NodeInfoLine(vm)
 		self <= self.painel
 	def refreshHostVMs(self, req):
@@ -348,7 +348,7 @@ class EstadoVM(html.DIV):
 			else:
 				for vmreg in self.vms:
 					if vmreg["nome"]==vmr:
-						if estado != vmreg["estado"]:
+						if estado != vmreg["estado"][0]:
 							ajax.post("/hosts/%s/status/%s"%(vmreg["id"],estado), oncomplete=self.statusChangeResult)
 
 				
@@ -366,9 +366,9 @@ class EstadoVM(html.DIV):
 		if not req.json["STATUS"]:
 			# alert("VM não encontrada, criando entrada no DB")
 			d = {"nome":vm, "tipo":"V", "hospedeiro":self.hostid}
-			if vm in self.estado["on"]: d["estado"]="1"
-			elif vm in self.estado["off"]: d["estado"]="0"
-			else: d["estado"]="-1"
+			if vm in self.estado["on"]: d["estado"][0]="1"
+			elif vm in self.estado["off"]: d["estado"][0]="0"
+			else: d["estado"][0]="-1"
 			ajax.put("/vm/", data=json.dumps(d), oncomplete=self.vmAdded, headers={"Content-Type": "application/json; charset=utf-8"})
 	
 	def vmAdded(self, req):
@@ -390,11 +390,11 @@ class TipoHost(html.DIV):
 			self.style = {"width":"200px"}
 		self.disabled = True
 		self.hostinfo = h
-		self.tipo = h["tipo"]
+		self.tipo = h["tipo"][0]
 		if self.tipo=="H":  # HOST
 			if mini:self.innerHTML = "H"
 			else: self.innerHTML = "Host"
-			if self.hostinfo["estado"]=='1':
+			if self.hostinfo["estado"][0]=='1':
 				self.classList.add("w3-blue")
 			else: self.classList.add("w3-grey")
 			# self.bind("click",self.vmstate)
