@@ -1,5 +1,7 @@
 from fastapi import FastAPI, Request
 
+from pyghmi.ipmi import command as IPMI
+
 from pydantic import BaseModel
 from typing import Optional
 
@@ -54,8 +56,18 @@ class HostInfo(BaseModel):
 async def root():
     return RedirectResponse("/web/host.html")
 
-##  /hosts
 @app.get("/hosts")
+async def host():
+	db = DB()
+
+	# somente Hosts que não são VMs 'V'
+	db.cursor.execute("Select * from servidor")
+	# db.cursor.execute("Select id,nome,comentario,CONVERT(estado,CHAR)as estado,CONVERT(tipo,CHAR) as tipo,cpu,n,mem from maq where tipo!='V'")
+	tudo = db.cursor.fetchall()
+	return JSONResponse(content=jsonable_encoder(tudo))
+	
+##  /hosts
+@app.get("/hosts1")
 async def host():
 	db = DB()
 
@@ -92,6 +104,34 @@ async def hostinfoById(hostid):
 	for iface in interfaces:
 		h['redes'][iface["ip"]]=iface["rede"]
 	return JSONResponse(content=jsonable_encoder(h))
+
+@app.get("/hosts/{hostid}/status")
+async def pegaStatus(hostid):    # ip, senha):	
+	ipmi_conn = None
+	db = DB()
+	db.cursor.execute("Select id,Nome,IPMI_IP,senhaIPMI from servidor where id=%s"%hostid)
+	credenciais = db.cursor.fetchone()
+	ip = credenciais["IPMI_IP"]
+	senha = credenciais["senhaIPMI"]
+
+	try:
+		ipmi_conn = IPMI.Command(bmc=ip, userid='admin', password=senha) #, keepalive=False)
+		valor = ipmi_conn.get_power().get('powerstate')                                                        
+																												
+		temp = None                                                                                            
+		if valor == 'on':                                                                                      
+			try:                                                                                               
+				temp = ipmi_conn.get_sensor_reading('System Temp').value                                       
+			except:                                                                                            
+				temp = None                                                                                    
+		# return (valor == 'on', temp)                                                                           
+		return JSONResponse(content=jsonable_encoder({"power":valor == 'on',"temp":temp}))
+																										
+	except Exception as e:                                                                                     
+		print(f"Erro: {e}")                                                                                                                                                           
+		return JSONResponse(content=jsonable_encoder({None,None}))																										
+	finally:                                                                                                   
+		pass 
 
 @app.get("/hosts/{hostid}/powerstatus")
 async def hostinfoPowerStatus(hostid):
