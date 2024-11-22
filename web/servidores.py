@@ -62,10 +62,10 @@ class CaixaServidor(html.DIV):
             else:
                 corcaixa="w3-light-green"
         else:
-        if self.status is None:
-            corcaixa="w3-white"
-        else: # OFF
-            corcaixa="w3-light-grey"
+            if self.status is None:
+                corcaixa="w3-white"
+            else: # OFF
+                corcaixa="w3-light-grey"
         self.classList.add(corcaixa)
 
             
