@@ -17,40 +17,40 @@ class Rack( html.DIV ):
 		self.style = {"width": RWIDTH, "margin":0, "padding":0} #, "height":"100%", "position":"absolute"}
 		self.hd={}
 		#rack.style={"display": "table-cell"}
-		ajax.get("/hosts", oncomplete=self.dataLoaded)
+		ajax.get("/hosts1", oncomplete=self.dataLoaded)
 	def dataLoaded(self, res):
 		hostlist = res.json
 		for item in hostlist:
-			self.hd[item["id"]]=Servidor(item)     #item
+			self.hd[item["id"]]=item  #Servidor(item)     #item
 		self.carregaUnidades()
 	def carregaUnidades(self):
 		self <= Unidade(1, "Dataceter-Unifesp")
-		self <= Unidade(2,[self.hd[558],self.hd[559],self.hd[560],self.hd[561]])
+		self <= Unidade(2,[Modulo(self.hd[558]),Modulo(self.hd[559]),Modulo(self.hd[560]),Modulo(self.hd[561])])
 		self <= Unidade(1, "DCP-DIS-Unifesp")
 		self <= Unidade(1, "RACK 1")
-		self <= Unidade(1, [self.hd[525]])
-		self <= Unidade(1, [self.hd[524]])
-		self <= Unidade(1, [self.hd[523]])
-		self <= Unidade(1, [self.hd[522]])
-		self <= Unidade(1, [self.hd[521]])
-		self <= Unidade(1, [self.hd[567]])
+		self <= Unidade(1, [Modulo(self.hd[525])])
+		self <= Unidade(1, [Modulo(self.hd[524])])
+		self <= Unidade(1, [Modulo(self.hd[523])])
+		self <= Unidade(1, [Modulo(self.hd[522])])
+		self <= Unidade(1, [Modulo(self.hd[521])])
+		self <= Unidade(1, [Modulo(self.hd[567])])
 		self <= Unidade(1, "DISPLAY")
-		self <= Unidade(2, [self.hd[563]])
-		self <= Unidade(2, [self.hd[562]])
+		self <= Unidade(2, [Modulo(self.hd[563])])
+		self <= Unidade(2, [Modulo(self.hd[562])])
 		self <= Unidade(1, "Aruba-237")
 		self <= Unidade(1, "Aruba-236")
-		self <= Unidade(2,[self.hd[554],self.hd[555],self.hd[556],self.hd[557]])
-		self <= Unidade(2,[self.hd[550],self.hd[551],self.hd[552],self.hd[553]])
-		self <= Unidade(2,[self.hd[546],self.hd[547],self.hd[548],self.hd[549]])
-		self <= Unidade(2,[self.hd[542],self.hd[543],self.hd[544],self.hd[545]])
-		self <= Unidade(2,[self.hd[538],self.hd[539],self.hd[540],self.hd[541]])
-		self <= Unidade(2,[self.hd[534],self.hd[535],self.hd[536],self.hd[537]])
-		self <= Unidade(2,[self.hd[530],self.hd[531],self.hd[532],self.hd[533]])
-		self <= Unidade(2,[self.hd[526],self.hd[527],self.hd[528],self.hd[529]])
+		self <= Unidade(2,[Modulo(self.hd[554]),Modulo(self.hd[555]),Modulo(self.hd[556]),Modulo(self.hd[557])])
+		self <= Unidade(2,[Modulo(self.hd[550]),Modulo(self.hd[551]),Modulo(self.hd[552]),Modulo(self.hd[553])])
+		self <= Unidade(2,[Modulo(self.hd[546]),Modulo(self.hd[547]),Modulo(self.hd[548]),Modulo(self.hd[549])])
+		self <= Unidade(2,[Modulo(self.hd[542]),Modulo(self.hd[543]),Modulo(self.hd[544]),Modulo(self.hd[545])])
+		self <= Unidade(2,[Modulo(self.hd[538]),Modulo(self.hd[539]),Modulo(self.hd[540]),Modulo(self.hd[541])])
+		self <= Unidade(2,[Modulo(self.hd[534]),Modulo(self.hd[535]),Modulo(self.hd[536]),Modulo(self.hd[537])])
+		self <= Unidade(2,[Modulo(self.hd[530]),Modulo(self.hd[531]),Modulo(self.hd[532]),Modulo(self.hd[533])])
+		self <= Unidade(2,[Modulo(self.hd[526]),Modulo(self.hd[527]),Modulo(self.hd[528]),Modulo(self.hd[529])])
 		self <= Unidade(1, "RACK 2")
-		self <= Unidade(1, [self.hd[565]])
-		self <= Unidade(1, [self.hd[567]])
-		self <= Unidade(2, [self.hd[566]])
+		self <= Unidade(1, [Modulo(self.hd[565])])
+		self <= Unidade(1, [Modulo(self.hd[567])])
+		self <= Unidade(2, [Modulo(self.hd[566])])
 
 class Unidade(html.DIV ):
     def __init__(self, h, mods):
@@ -77,32 +77,32 @@ class Unidade(html.DIV ):
             self <= cel1
             self <= cel2
 
-# class Modulo(html.DIV):
-# 	def __init__(self, hinfo=None):
-# 		html.DIV.__init__(self)  #, Class="w3-panel w3-cell w3-red")
-# 		self.classList.add("w3-border")
-# 		self.classList.add("w3-tiny")
-# 		self.style = { "margin":0, "padding":0, "height":"100%"}#,   "height": "100vh"}
-# 		self.h = hinfo
-# 		if type(hinfo)==str:
-# 			self.innerHTML=hinfo
-# 			self.classList.add("w3-light-grey")
-# 		elif self.h!=None:
-# 			self.id = "mod-%d"%self.h.id
-# 			self.refresh()
-# 	def refresh(self):
-# 		self.innerHTML = str(self.h.id) + " - " + self.h.nome
-# 		self.classList.add("w3-hover-blue")
-# 		# if self.h["estado"][0]=='1':
-# 		# 	if self.h["tipo"][0]=='H':
-# 		# 		self.classList.add("w3-blue")
-# 		# 	else:
-# 		# 		self.classList.add("w3-cyan")
-# 		# elif  self.h["estado"][0]=='-1':
-# 		#     self.classList.add("w3-yellow")
-# 		self.bind("click", self.mostraHost)
-# 	def mostraHost(self,ev):
-# 		NodeInfo(self.h.id)
+class Modulo(html.DIV):
+	def __init__(self, hinfo=None):
+		html.DIV.__init__(self)  #, Class="w3-panel w3-cell w3-red")
+		self.classList.add("w3-border")
+		self.classList.add("w3-tiny")
+		self.style = { "margin":0, "padding":0, "height":"100%"}#,   "height": "100vh"}
+		self.h = hinfo
+		if type(hinfo)==str:
+			self.innerHTML=hinfo
+			self.classList.add("w3-light-grey")
+		elif self.h!=None:
+			self.id = "mod-%d"%self.h["id"]
+			self.refresh()
+	def refresh(self):
+		self.innerHTML = str(self.h["id"]) + " - " + self.h["nome"]
+		self.classList.add("w3-hover-blue")
+		# if self.h["estado"][0]=='1':
+		# 	if self.h["tipo"][0]=='H':
+		# 		self.classList.add("w3-blue")
+		# 	else:
+		# 		self.classList.add("w3-cyan")
+		# elif  self.h["estado"][0]=='-1':
+		#     self.classList.add("w3-yellow")
+		self.bind("click", self.mostraHost)
+	def mostraHost(self,ev):
+		NodeInfo(self.h.id)
 
 class Servidor(html.DIV):
 	def __init__(self, d):
@@ -118,15 +118,15 @@ class Servidor(html.DIV):
 		self.estado = 'X'
 		self.temp=None
 
-		self.classList.add("w3-border")
-		self.classList.add("w3-tiny")
-		self.style = { "margin":0, "padding":0, "height":"100%"}
+		self.style = {"max-width": "300px", "padding": "15px", "margin": "10px auto", "border-radius": "5px"}
+
+		self.classList.add("w3-card4")
 		self.innerHTML = str(self.id) + " - " + self.nome
 		self.classList.add("w3-hover-blue")
 		self.bind("click", self.mostraHost)
 		self.refresh()
 	def refresh(self):
-		ajax.get("/hosts/%d/status"%self.id, oncomplete=self.dataLoaded)
+		ajax.get("/hosts/%s/status"%self.id, oncomplete=self.dataLoaded)
 	def dataLoaded(self,res):
 		hostinfo = res.json
 		self.temp=hostinfo["temp"]
@@ -141,3 +141,11 @@ class Servidor(html.DIV):
 			self.classList.add("w3-cyan")
 	def mostraHost(self,ev):
 		NodeInfo(self.id)
+
+class ServidorBox(html.DIV):
+	def __init__(self, d):
+		html.DIV.__init__(self)
+		self.style = {"max-width": "300px", "padding": "15px", "margin": "10px auto", "border-radius": "5px"}
+		self.classList
+
+

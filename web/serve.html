@@ -1,0 +1,44 @@
+<!doctype html>
+<html>
+
+<head>
+<!-- Brython -->
+<script src="https://cdnjs.cloudflare.com/ajax/libs/brython/3.10.6/brython.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/brython/3.10.6/brython_stdlib.min.js"></script>
+
+<!--  w3css -->
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<link rel="stylesheet" href="https://www.w3schools.com/w3css/4/w3.css">
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/4.7.0/css/font-awesome.min.css">
+
+<style>
+    body, html {
+        height: 100%;
+        margin: 0;
+    }
+    .grid-container {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(250px, 1fr));
+            gap: 15px;
+            padding: 20px;
+            height: 95%;
+            box-sizing: border-box;
+        }
+
+    .server-box {
+            padding: 15px;
+            border-radius: 5px;
+        }
+</style>
+
+</head>
+
+<body onload="brython(1)">
+
+<div id="dialog"></div>
+
+<script type="text/python" src="servidores.py"></script>
+
+</body>
+
+</html>

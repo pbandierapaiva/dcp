@@ -1,4 +1,4 @@
-#!/opt/dcp/ambiente/bin/python
+#!/home/paiva/sandbox/dcp/ambiente/bin/python
 # -*- coding: utf-8 -*-
 import re
 import sys
