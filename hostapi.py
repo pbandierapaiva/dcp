@@ -54,6 +54,7 @@ def my_scheduled_task():
 			except:                                                                                            
 				temp = None
 
+
 		match estado:
 			case 'on':
 				estadoSQL= 'True'  # Corresponds to SQL TRUE
