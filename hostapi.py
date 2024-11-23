@@ -41,7 +41,7 @@ def my_scheduled_task():
 		senha = reg["senhaIPMI"]
 
 		try:
-			ipmi_conn = IPMI.Command(bmc=ip, userid='admin', password=senha) #, keepalive=False)
+			ipmi_conn = IPMI.Command(bmc=ip, userid='admin', password=senha, keepalive=False)
 			estado = ipmi_conn.get_power().get('powerstate')                                                        
 																											
 		except Exception as e:    
@@ -68,14 +68,19 @@ def my_scheduled_task():
 			insereCmd += f"VALUES ({id}, CURRENT_TIMESTAMP, {estadoSQL}, {temp});"
 																		
 		db.cursor.execute(insereCmd)
+		# del ipmi_conn
 	db.commit()
+
 # Initialize the scheduler
 scheduler = BackgroundScheduler()
 scheduler.start()
 
 scheduler.add_job(
     my_scheduled_task,
-    CronTrigger(minute="*/5"),  # Equivalent to a cronjob running every minute
+    CronTrigger(minute="*/10"),  # Equivalent to a cronjob running every minute
+    max_instances=3,
+	misfire_grace_time=250,
+	coalesce=True
 )
 
 
@@ -111,6 +116,34 @@ class HostInfo(BaseModel):
 @app.get("/")
 async def root():
     return RedirectResponse("/web/host.html")
+
+@app.get("/DC")
+async def DCstatus():
+	sql =	"""
+		WITH ranked_records AS (
+			SELECT
+				servidor.id,
+				nome,
+				DC,
+				ts,
+				state,
+				temp,
+				ROW_NUMBER() OVER (PARTITION BY servidor.id ORDER BY ts DESC) AS rnk
+			FROM servidor_log
+			INNER JOIN servidor ON servidor.id = servidor_log.id
+		)
+		SELECT 
+			DC,
+			ROUND( AVG(temp), 2) AS avg_temp,
+			MAX(ts) AS latest_ts
+		FROM ranked_records
+		WHERE temp IS NOT NULL AND state > 0 AND rnk = 1
+		GROUP BY DC;
+		"""
+	db = DB()
+	db.cursor.execute(sql)
+	medias = db.cursor.fetchall()
+	return JSONResponse(content=jsonable_encoder(medias))
 
 @app.get("/hosts")
 async def host():
