@@ -20,8 +20,64 @@ import subprocess
 
 from conexao import conexao, rootpw
 from paramiko.client import SSHClient, AutoAddPolicy
+from fastapi import FastAPI
+from apscheduler.schedulers.background import BackgroundScheduler
+from apscheduler.triggers.cron import CronTrigger
 
 app = FastAPI()
+
+# Function to be scheduled
+def my_scheduled_task():
+	print("Scheduled task is running! DB")
+	db = DB()
+	db.cursor.execute("Select * from servidor")	
+	tudo = db.cursor.fetchall()
+
+
+	for reg in tudo:
+		insereCmd = """INSERT INTO servidor_log (id, ts, state, temp) """
+
+		ip = reg["IPMI_IP"]
+		senha = reg["senhaIPMI"]
+
+		try:
+			ipmi_conn = IPMI.Command(bmc=ip, userid='admin', password=senha) #, keepalive=False)
+			estado = ipmi_conn.get_power().get('powerstate')                                                        
+																											
+		except Exception as e:    
+			estado = None                                                                                 
+			print(f"Erro: {e}")           
+
+		if estado == 'on':                                                                                      
+			try:                                                                                               
+				temp = ipmi_conn.get_sensor_reading('System Temp').value                                       
+			except:                                                                                            
+				temp = None
+
+		match estado:
+			case 'on':
+				estadoSQL= 'True'  # Corresponds to SQL TRUE
+			case 'off':
+				estadoSQL= 'False'  # Corresponds to SQL FALSE
+			case None:
+				estadoSQL= 'NULL'  # Corresponds to SQL NULL
+		
+		if temp is None:
+			insereCmd += f"VALUES ({reg["id"]}, CURRENT_TIMESTAMP, {estadoSQL}, NULL);"
+		else:
+			insereCmd += f"VALUES ({reg["id"]}, CURRENT_TIMESTAMP, {estadoSQL}, {temp});"
+																		
+		db.cursor.execute(insereCmd)
+	db.commit()
+# Initialize the scheduler
+scheduler = BackgroundScheduler()
+scheduler.start()
+
+scheduler.add_job(
+    my_scheduled_task,
+    CronTrigger(minute="*/5"),  # Equivalent to a cronjob running every minute
+)
+
 
 app.mount("/web", StaticFiles(directory="web"), name="web")
 
@@ -59,7 +115,6 @@ async def root():
 @app.get("/hosts")
 async def host():
 	db = DB()
-
 	# somente Hosts que não são VMs 'V'
 	db.cursor.execute("Select * from servidor")
 	# db.cursor.execute("Select id,nome,comentario,CONVERT(estado,CHAR)as estado,CONVERT(tipo,CHAR) as tipo,cpu,n,mem from maq where tipo!='V'")
@@ -117,21 +172,18 @@ async def pegaStatus(hostid):    # ip, senha):
 	try:
 		ipmi_conn = IPMI.Command(bmc=ip, userid='admin', password=senha) #, keepalive=False)
 		valor = ipmi_conn.get_power().get('powerstate')                                                        
-																												
-		temp = None                                                                                            
-		if valor == 'on':                                                                                      
-			try:                                                                                               
-				temp = ipmi_conn.get_sensor_reading('System Temp').value                                       
-			except:                                                                                            
-				temp = None                                                                                    
-		# return (valor == 'on', temp)                                                                           
-		return JSONResponse(content=jsonable_encoder({"power":valor == 'on',"temp":temp}))
 																										
 	except Exception as e:                                                                                     
 		print(f"Erro: {e}")                                                                                                                                                           
 		return JSONResponse(content=jsonable_encoder({None,None}))																										
-	finally:                                                                                                   
-		pass 
+																												
+	temp = None                                                                                            
+	if valor == 'on':                                                                                      
+		try:                                                                                               
+			temp = ipmi_conn.get_sensor_reading('System Temp').value                                       
+		except:                                                                                            
+			temp = None                                                                                    
+	return JSONResponse(content=jsonable_encoder({"power":valor == 'on',"temp":temp}))
 
 @app.get("/hosts/{hostid}/powerstatus")
 async def hostinfoPowerStatus(hostid):
