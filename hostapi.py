@@ -61,10 +61,11 @@ def my_scheduled_task():
 		else:
 				estadoSQL= 'NULL'  # Corresponds to SQL NULL
 		
+		id = reg["id"]
 		if temp is None:
-			insereCmd += f"VALUES ({reg["id"]}, CURRENT_TIMESTAMP, {estadoSQL}, NULL);"
+			insereCmd += f"VALUES ({id}, CURRENT_TIMESTAMP, {estadoSQL}, NULL);"
 		else:
-			insereCmd += f"VALUES ({reg["id"]}, CURRENT_TIMESTAMP, {estadoSQL}, {temp});"
+			insereCmd += f"VALUES ({id}, CURRENT_TIMESTAMP, {estadoSQL}, {temp});"
 																		
 		db.cursor.execute(insereCmd)
 	db.commit()
