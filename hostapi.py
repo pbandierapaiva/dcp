@@ -54,12 +54,11 @@ def my_scheduled_task():
 			except:                                                                                            
 				temp = None
 
-		match estado:
-			case 'on':
+		if estado== 'on':
 				estadoSQL= 'True'  # Corresponds to SQL TRUE
-			case 'off':
+		elif 'off':
 				estadoSQL= 'False'  # Corresponds to SQL FALSE
-			case None:
+		else:
 				estadoSQL= 'NULL'  # Corresponds to SQL NULL
 		
 		if temp is None:
