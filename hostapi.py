@@ -40,8 +40,9 @@ async def DCstatus():
 	SELECT 
 	DC,
 	ROUND(AVG(temp), 2) AS avg_temp,
-	SUM(CASE WHEN state = 0 THEN 1 ELSE 0 END) AS count_state_0,
-	SUM(CASE WHEN state = 1 THEN 1 ELSE 0 END) AS count_state_1
+	SUM(CASE WHEN state = 0 THEN 1 ELSE 0 END) AS stateON,
+	SUM(CASE WHEN state = 1 THEN 1 ELSE 0 END) AS stateOFF,
+	rodada
 	FROM servidor_log
 	WHERE rodada = (
 	SELECT MAX(rodada) FROM servidor_log
