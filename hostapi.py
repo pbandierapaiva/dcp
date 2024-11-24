@@ -1,117 +1,31 @@
+## hostapi.py - servidor FASTAPI para monitoramento do DC
+
 from fastapi import FastAPI, Request
-
-from pyghmi.ipmi import command as IPMI
-
-from pydantic import BaseModel
-from typing import Optional
-
 from fastapi.responses import HTMLResponse
 from fastapi.staticfiles import StaticFiles
 from fastapi.encoders import jsonable_encoder
 from fastapi.responses import JSONResponse
 from fastapi.responses import RedirectResponse
 
+from pyghmi.ipmi import command as IPMI
+
 # driver mysql
-#import mariadb
-import mysql.connector as mariadb
+# import mariadb
+# import mysql.connector as mariadb
 import re
 import os
 import subprocess
 
-from conexao import conexao, rootpw
+from database import DB, NetDev, HostInfo 
+from agendador import agendaMonitoramento
+#from conexao import conexao, rootpw
+
 from paramiko.client import SSHClient, AutoAddPolicy
-from fastapi import FastAPI
-from apscheduler.schedulers.background import BackgroundScheduler
-from apscheduler.triggers.cron import CronTrigger
 
 app = FastAPI()
-
-# Function to be scheduled
-def my_scheduled_task():
-	print("Scheduled task is running! DB")
-	db = DB()
-	db.cursor.execute("Select * from servidor")	
-	tudo = db.cursor.fetchall()
-
-
-	for reg in tudo:
-		insereCmd = """INSERT INTO servidor_log (id, ts, state, temp) """
-
-		ip = reg["IPMI_IP"]
-		senha = reg["senhaIPMI"]
-
-		try:
-			ipmi_conn = IPMI.Command(bmc=ip, userid='admin', password=senha, keepalive=False)
-			estado = ipmi_conn.get_power().get('powerstate')                                                        
-																											
-		except Exception as e:    
-			estado = None                                                                                 
-			print(f"Erro: {e}")           
-
-		if estado == 'on':                                                                                      
-			try:                                                                                               
-				temp = ipmi_conn.get_sensor_reading('System Temp').value                                       
-			except:                                                                                            
-				temp = None
-
-		if estado== 'on':
-				estadoSQL= 'True'  # Corresponds to SQL TRUE
-		elif 'off':
-				estadoSQL= 'False'  # Corresponds to SQL FALSE
-		else:
-				estadoSQL= 'NULL'  # Corresponds to SQL NULL
-		
-		id = reg["id"]
-		if temp is None:
-			insereCmd += f"VALUES ({id}, CURRENT_TIMESTAMP, {estadoSQL}, NULL);"
-		else:
-			insereCmd += f"VALUES ({id}, CURRENT_TIMESTAMP, {estadoSQL}, {temp});"
-																		
-		db.cursor.execute(insereCmd)
-		# del ipmi_conn
-	db.commit()
-
-# Initialize the scheduler
-scheduler = BackgroundScheduler()
-scheduler.start()
-
-scheduler.add_job(
-    my_scheduled_task,
-    CronTrigger(minute="*/10"),  # Equivalent to a cronjob running every minute
-    max_instances=3,
-	misfire_grace_time=250,
-	coalesce=True
-)
-
+agendaMonitoramento()
 
 app.mount("/web", StaticFiles(directory="web"), name="web")
-
-class DB:
-	def __init__(self):
-		self.con= mariadb.connect(**conexao)
-		#self.con= mysqlconnector.connect(**conexao)
-		self.cursor= self.con.cursor(dictionary=True)
-	def commit(self):
-		self.con.commit()
-
-class NetDev(BaseModel):
-	ip: str
-	rede: str
-	ether: Optional[str]
-	maq: int
-
-class HostInfo(BaseModel):
-	hostid:Optional[int]
-	nome: str
-	comentario: Optional[str]
-	estado: str
-	tipo: Optional[str]
-	hospedeiro: Optional[int]
-	so: Optional[str]
-	kernel: Optional[str]
-	cpu: Optional[str]
-	n: Optional[int]
-	mem: Optional[int]
 
 @app.get("/")
 async def root():
@@ -119,31 +33,88 @@ async def root():
 
 @app.get("/DC")
 async def DCstatus():
-	sql =	"""
-		WITH ranked_records AS (
-			SELECT
-				servidor.id,
-				nome,
-				DC,
-				ts,
-				state,
-				temp,
-				ROW_NUMBER() OVER (PARTITION BY servidor.id ORDER BY ts DESC) AS rnk
-			FROM servidor_log
-			INNER JOIN servidor ON servidor.id = servidor_log.id
-		)
-		SELECT 
-			DC,
-			ROUND( AVG(temp), 2) AS avg_temp,
-			MAX(ts) AS latest_ts
-		FROM ranked_records
-		WHERE temp IS NOT NULL AND state > 0 AND rnk = 1
-		GROUP BY DC;
-		"""
+
+	## SQL para pegar as últimas sondagens de todos os servidores ligados
+	## e calcular a temperatura média dos ambientes STI e DCP
+	sql = """
+	SELECT 
+	DC,
+	ROUND(AVG(temp), 2) AS avg_temp,
+	SUM(CASE WHEN state = 0 THEN 1 ELSE 0 END) AS count_state_0,
+	SUM(CASE WHEN state = 1 THEN 1 ELSE 0 END) AS count_state_1
+	FROM servidor_log
+	WHERE rodada = (
+	SELECT MAX(rodada) FROM servidor_log
+	)
+	GROUP BY DC;
+	"""
+
+	# sql =	"""
+	# 	WITH ranked_records AS (
+	# 		SELECT
+	# 			servidor.id,
+	# 			nome,
+	# 			DC,
+	# 			ts,
+	# 			state,
+	# 			temp,
+	# 			ROW_NUMBER() OVER (PARTITION BY servidor.id ORDER BY ts DESC) AS rnk
+	# 		FROM servidor_log
+	# 		INNER JOIN servidor ON servidor.id = servidor_log.id
+	# 	)
+	# 	SELECT 
+	# 		DC,
+	# 		ROUND( AVG(temp), 2) AS avg_temp,
+	# 		MAX(ts) AS latest_ts
+	# 	FROM ranked_records
+	# 	WHERE temp IS NOT NULL AND state > 0 AND rnk = 1
+	# 	GROUP BY DC;servidor_log;
+
+	# 	SELECT state, COUNT(*) AS N
+	# 	FROM (
+	# 		SELECT 
+	# 			id, 
+	# 			state, 
+	# 			ts,
+	# 			ROW_NUMBER() OVER (PARTITION BY id ORDER BY ts DESC) AS rnk
+	# 		FROM servidor_log
+	# 	) ultimosRegistros
+	# 	WHERE rnk = 1
+	# 	GROUP BY state;
+	# 	"""
 	db = DB()
 	db.cursor.execute(sql)
-	medias = db.cursor.fetchall()
-	return JSONResponse(content=jsonable_encoder(medias))
+	results = db.cursor.fetchall()
+	return JSONResponse(content=jsonable_encoder(results))	
+	# # Fetch all results from each statement
+	# results = []
+	# for result in db.cursor:
+	# # for result in cursor:
+	# 	try:
+	# 		# Only fetch rows for SELECT queries
+	# 		if result.with_rows:
+	# 			results.append(result.fetchall())
+	# 	except AttributeError:
+	# 		continue  # Skip non-SELECT queries
+
+	# db.cursor.close()
+
+	# # Separate the results for the two queries
+	# medias = results[0] if len(results) > 0 else []
+	# contadores = results[1] if len(results) > 1 else []
+	# # 	if result.with_rows:  # Process only if the result set contains rows
+	# # 		results.append(result.fetchall())
+
+	# # # Separate results for the two queries
+	# # medias, contadores = results
+
+	# # medias = db.cursor.fetchall()
+	# # db.commit()
+
+	# # db.cursor.execute(sqlContaONOFF)
+	# # contadores = db.cursor.fetchall()
+	# return JSONResponse(content=jsonable_encoder({"medias":medias,"contadores":contadores}))
+	# # return JSONResponse(content=jsonable_encoder({"medias":medias}))	
 
 @app.get("/hosts")
 async def host():
