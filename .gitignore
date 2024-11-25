@@ -1,5 +1,6 @@
 amb*
 ambiente
+ambiente/*
 conexao.py
 data/*
 venv
