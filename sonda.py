@@ -1,10 +1,8 @@
 ## sonda.py - módulo autônomo (standalone) para sondar servidores DCP
 ##
 from database import DB, NetDev, HostInfo 
-from conexao import conexao
+from conexao import conexao,botToken
 
-#import subprocess
-from conexao import conexao, rootpw
 from pyghmi.ipmi import command as IPMI
 
 import requests
@@ -85,7 +83,7 @@ def verificaStatus():
 
 
 def enviaTelegram(jdata):
-    BOT_TOKEN = "7703319717:AAEAqzGt3JV0lopIR95lKs8ew_EVnBvP9Hw"
+    BOT_TOKEN = botToken
     CHAT_ID = "5211765818"
 
     table_data = []
