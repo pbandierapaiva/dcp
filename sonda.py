@@ -79,8 +79,13 @@ def verificaStatus():
     db = DB()
     db.cursor.execute(sql)
     results = db.cursor.fetchall()
-    enviaTelegram(results)
-
+    
+    for l in results:
+        if ( l["DC"]=="DIS" and l["avg_temp"]>30 ) \
+            or ( l["DC"]=="STI" and l["avg_temp"]>33 ):
+            enviaTelegram(results)
+        else:
+            print("Status OK",str(l))
 
 def enviaTelegram(jdata):
     BOT_TOKEN = botToken
