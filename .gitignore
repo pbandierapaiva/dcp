@@ -1,6 +1,7 @@
 amb*
 ambiente
 ambiente/*
+ambiente-note/*
 conexao.py
 data/*
 venv
