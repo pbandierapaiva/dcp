@@ -5,7 +5,7 @@ from apscheduler.triggers.cron import CronTrigger
 import subprocess
 
 # Function to be scheduled
-def my_scheduled_task():
+def tarefaAgendada():
 	print("Rodando monitoramento agendado!")
 	executa = ["python", "sonda.py"]
 	output = subprocess.run(executa, capture_output=True, text=True		)
@@ -17,8 +17,8 @@ def agendaMonitoramento():
     scheduler.start()
 
     scheduler.add_job(
-        my_scheduled_task,
-        CronTrigger(minute="*/3"),  # Equivalent to a cronjob running every minute
+        tarefaAgendada,
+        CronTrigger(minute="*/3"),  
         max_instances=3,
         misfire_grace_time=250,
         coalesce=True

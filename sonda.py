@@ -1,5 +1,7 @@
 ## sonda.py - módulo autônomo (standalone) para sondar servidores DCP
 ##
+##
+
 from database import DB, NetDev, HostInfo 
 from conexao import conexao,botToken
 
@@ -8,7 +10,7 @@ from pyghmi.ipmi import command as IPMI
 import requests
 from tabulate import tabulate
 
-from datetime import datetime
+from datetime import datetime,time
 import pytz
 
 
@@ -27,7 +29,7 @@ def main():
 
         try:
             ipmi_conn = IPMI.Command(bmc=ip, userid='admin', password=senha, keepalive=False)
-            estado = ipmi_conn.get_power().get('powerstate')                                                        
+            estado = ipmi_conn.get_power().get('powerstate')
                                                                                                             
         except Exception as e:    
             estado = None                                                                                 
@@ -83,9 +85,23 @@ def verificaStatus():
     for l in results:
         if ( l["DC"]=="DIS" and l["avg_temp"]>30 ) \
             or ( l["DC"]=="STI" and l["avg_temp"]>34 ):
+            print("ATENÇÃO!\n",str(l))
             enviaTelegram(results)
         else:
-            print("Status OK",str(l))
+            print("Status OK")
+    
+    # envia diário às 17h    
+    now = datetime.now()
+    current_time = now.time()  # Correctly access the time object
+    start_time = time(17, 0, 0)  # 17:00:00
+    end_time = time(17, 2, 59)   # 17:02:59 
+    if start_time <= current_time <= end_time:
+        enviaTelegram(results)
+    
+    sqlLimpa = """DELETE FROM servidor_log
+        WHERE rodada < NOW() - INTERVAL 48 HOUR;"""
+    db.cursor.execute(sqlLimpa)
+    db.commit()
 
 def enviaTelegram(jdata):
     BOT_TOKEN = botToken
