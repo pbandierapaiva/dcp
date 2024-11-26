@@ -16,7 +16,7 @@ def main():
     horasonda = datetime.now(pytz.timezone("America/Sao_Paulo")).strftime('%Y-%m-%d %H:%M:%S')
 
     db = DB()
-    db.cursor.execute("Select * from servidor")	
+    db.cursor.execute("Select * from servidor where habilitado=1")	
     tudo = db.cursor.fetchall()
 
     for reg in tudo:
@@ -31,7 +31,7 @@ def main():
                                                                                                             
         except Exception as e:    
             estado = None                                                                                 
-            print(f"Erro: {e}")           
+            print(f"{reg['Nome']} Erro: {e}")           
 
         if estado == 'on':                                                                                      
             try:                                                                                               
@@ -60,7 +60,7 @@ def main():
             print(insereCmd)
     db.commit()
     verificaStatus()
-    print("sonda concluída")
+    print("Sonda concluída")
 
 def verificaStatus():
     sql = """
@@ -82,7 +82,7 @@ def verificaStatus():
     
     for l in results:
         if ( l["DC"]=="DIS" and l["avg_temp"]>30 ) \
-            or ( l["DC"]=="STI" and l["avg_temp"]>33 ):
+            or ( l["DC"]=="STI" and l["avg_temp"]>34 ):
             enviaTelegram(results)
         else:
             print("Status OK",str(l))
