@@ -6,7 +6,7 @@ import subprocess
 
 # Function to be scheduled
 def tarefaAgendada():
-	print("Rodando monitoramento agendado!")
+	print("Rodando monitoramento")
 	executa = ["python", "sonda.py"]
 	output = subprocess.run(executa, capture_output=True, text=True		)
 	print(output.stdout)
