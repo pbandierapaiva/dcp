@@ -9,6 +9,12 @@ from fastapi.responses import RedirectResponse
 
 from pyghmi.ipmi import command as IPMI
 
+from fastapi import FastAPI, Depends, HTTPException, status
+from fastapi.security import OAuth2PasswordBearer, OAuth2PasswordRequestForm
+from jose import JWTError, jwt
+from passlib.context import CryptContext
+from datetime import datetime, timedelta
+
 # driver mysql
 # import mariadb
 # import mysql.connector as mariadb
@@ -20,11 +26,65 @@ from database import DB, NetDev, HostInfo
 from agendador import agendaMonitoramento
 from conexao import conexao, rootpw, botToken
 
+from conexao import SECRET_KEY,ALGORITHM,ACCESS_TOKEN_EXPIRE_MINUTES,ADMIN_PASSWORD
+
 from paramiko.client import SSHClient, AutoAddPolicy
 
 app = FastAPI()
 agendaMonitoramento()
 
+
+# pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
+
+
+oauth2_scheme = OAuth2PasswordBearer(tokenUrl="token")
+
+def create_access_token(data: dict, expires_delta: timedelta = None):
+    to_encode = data.copy()
+    expire = datetime.utcnow() + (expires_delta or timedelta(minutes=15))
+    to_encode.update({"exp": expire})
+    return jwt.encode(to_encode, SECRET_KEY, algorithm=ALGORITHM)
+
+
+async def get_current_admin(token: str = Depends(oauth2_scheme)):
+    """Extract and verify the admin token."""
+    try:
+        payload = jwt.decode(token, SECRET_KEY, algorithms=[ALGORITHM])
+        username: str = payload.get("sub")
+        if username != "admin":
+            raise HTTPException(status_code=403, detail="Not an admin user")
+        return username
+    except JWTError:
+        raise HTTPException(status_code=401, detail="Invalid token")
+
+
+# Routes
+@app.post("/token")
+async def login_for_access_token(form_data: OAuth2PasswordRequestForm = Depends()):
+    """Login endpoint to authenticate the admin."""
+    if form_data.username != "admin" or form_data.password != ADMIN_PASSWORD:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Incorrect username or password",
+            headers={"WWW-Authenticate": "Bearer"},
+        )
+    access_token = create_access_token(data={"sub": "admin"})
+    return {"access_token": access_token, "token_type": "bearer"}
+
+@app.get("/admin/command")
+async def admin_command(admin: str = Depends(get_current_admin)):
+    """Admin-only command."""
+    return {"message": "You have access to admin commands.", "user": admin}
+
+
+
+
+
+
+
+
+
+##########################################################
 app.mount("/web", StaticFiles(directory="web"), name="web")
 
 @app.get("/")

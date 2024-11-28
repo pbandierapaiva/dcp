@@ -1,4 +1,4 @@
-from browser import document
+from browser import document, window
 from browser import html, ajax, alert, confirm, prompt
 
 from browser.widgets.dialog import InfoDialog, Dialog
@@ -57,12 +57,17 @@ class CaixaServidor(html.DIV):
         self.desc = data["Descricao"]
         self.temp = data["temp"]
         self.status = data["state"]
-        cabeca = html.HEADER( self.id+"-"+self.nome, Class="w3-container ")
-        self.caixa = html.DIV(Class="w3-container ")
-        self <= cabeca
-        self<= self.caixa
+        # cabeca = html.HEADER( self.id+"-"+self.nome, Class="w3-container ")
+        # self.caixa = html.DIV(Class="w3-container ")
+        # self <= cabeca
+        # self<= self.caixa
 
-        # alert(self.id+"-"+self.nome+"-"+str(self.temp))
+        # Header
+        cabeca = html.HEADER(f"{self.id} - {self.nome}", 
+            Class="w3-container w3-padding w3-dark-grey",
+            title=self.desc)
+        self <= cabeca
+
         corcaixa=""
         if self.status:   # ON
             if (self.temp) and self.temp>35:
@@ -75,41 +80,26 @@ class CaixaServidor(html.DIV):
             else: # OFF
                 corcaixa="w3-light-grey"
         self.classList.add(corcaixa)
-        self.caixa.innerHTML = str(self.temp)
-        # self.update()
 
+        grid_container = html.DIV(Class="w3-row-padding w3-padding")
+        area1 = html.DIV(botaoLink("IPMI", f"http://{self.ipmi}"), Class=f"w3-col s4  w3-padding")
+        area2 = html.DIV(f"Type: {self.tipo}", Class=f"w3-col s4  w3-padding")
+        area3 = html.DIV( "---", Class=f"w3-col s4  w3-padding")
+        if self.temp:
+            area3.innerHTML = f"Temp: {self.temp}°C"
+        grid_container <= area1
+        grid_container <= area2
+        grid_container <= area3
+        self <= grid_container
 
-
-
-
-
-    def update(self):
-        ajax.get("/hosts/%s/status"%self.id, oncomplete=self.dataLoaded)
-    def dataLoaded(self,res):
-        try:
-            self.status = res.json["power"]
-        except:
-            self.status = None
-        try:
-            self.temp = float( res.json["temp"] )
-        except:
-            self.temp = None
-
-        corcaixa=""
-        if self.status:
-            if self.temp>30:
-                corcaixa="w3-light-red"
-            else:
-                corcaixa="w3-light-green"
-        else:
-            if self.status is None:
-                corcaixa="w3-white"
-            else: # OFF
-                corcaixa="w3-light-grey"
-        self.classList.add(corcaixa)
-        self.caixa.innerHTML = str(self.temp)
-
-# cabecalho = html.DIV("DCP-DIS-EPM-Unifesp", id="cabecalho", Class="w3-bar w3-card-2 w3-blue notranslate")
+class botaoLink(html.BUTTON):
+    def __init__(self, texto, url):
+        html.BUTTON.__init__(self,Class="w3-round w3-border") 
+        self.innerHTML = texto
+        self.link = url
+        self.bind("click", self.abreJanela)
+    def abreJanela(self,evt):
+        window.open(self.link, "_blank")
 
 document <= Cabecalho()
 

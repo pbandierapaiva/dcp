@@ -18,7 +18,7 @@ def agendaMonitoramento():
 
     scheduler.add_job(
         tarefaAgendada,
-        CronTrigger(minute="*/10"),  
+        CronTrigger(minute="*/3"),  
         max_instances=3,
         misfire_grace_time=250,
         coalesce=True
