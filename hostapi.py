@@ -95,6 +95,7 @@ async def DCstatus():
 	)
 	GROUP BY DC;
 	"""
+	
 
 	db = DB()
 	db.cursor.execute(sql)
