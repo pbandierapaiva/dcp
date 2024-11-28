@@ -26,7 +26,7 @@ from database import DB, NetDev, HostInfo
 from agendador import agendaMonitoramento
 from conexao import conexao, rootpw, botToken
 
-from conexao import SECRET_KEY,ALGORITHM,ACCESS_TOKEN_EXPIRE_MINUTES,ADMIN_PASSWORD
+# from conexao import SECRET_KEY,ALGORITHM,ACCESS_TOKEN_EXPIRE_MINUTES,ADMIN_PASSWORD
 
 from paramiko.client import SSHClient, AutoAddPolicy
 
