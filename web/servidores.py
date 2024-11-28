@@ -15,6 +15,7 @@ class GridServidores(html.DIV):
         ajax.get("/hosts", oncomplete=self.dataLoaded)
     def dataLoaded(self, res):
         hostlist = res.json
+        # alert(len(hostlist))
         for item in hostlist:
             serv =  CaixaServidor(item)
             self.servidores.append(serv)
@@ -35,14 +36,34 @@ class CaixaServidor(html.DIV):
         self.dc = data["DC"]
         self.tipo = data["H_S_X"]
         self.desc = data["Descricao"]
-        self.temp = None
-        self.status = None
+        self.temp = data["temp"]
+        self.status = data["state"]
         cabeca = html.HEADER( self.id+"-"+self.nome, Class="w3-container ")
         self.caixa = html.DIV(Class="w3-container ")
         self <= cabeca
         self<= self.caixa
 
-        self.update()
+        # alert(self.id+"-"+self.nome+"-"+str(self.temp))
+        corcaixa=""
+        if self.status:   # ON
+            if (self.temp) and self.temp>35:
+                corcaixa="w3-light-red"
+            else:
+                corcaixa="w3-light-green"
+        else:
+            if self.status is None:
+                corcaixa="w3-white"
+            else: # OFF
+                corcaixa="w3-light-grey"
+        self.classList.add(corcaixa)
+        self.caixa.innerHTML = str(self.temp)
+        # self.update()
+
+
+
+
+
+
     def update(self):
         ajax.get("/hosts/%s/status"%self.id, oncomplete=self.dataLoaded)
     def dataLoaded(self,res):
@@ -67,8 +88,6 @@ class CaixaServidor(html.DIV):
             else: # OFF
                 corcaixa="w3-light-grey"
         self.classList.add(corcaixa)
-
-            
         self.caixa.innerHTML = str(self.temp)
 
 cabecalho = html.DIV("DCP-DIS-EPM-Unifesp", id="cabecalho", Class="w3-bar w3-card-2 w3-blue notranslate")

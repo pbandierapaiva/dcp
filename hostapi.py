@@ -18,7 +18,7 @@ import subprocess
 
 from database import DB, NetDev, HostInfo 
 from agendador import agendaMonitoramento
-#from conexao import conexao, rootpw
+from conexao import conexao, rootpw, botToken
 
 from paramiko.client import SSHClient, AutoAddPolicy
 
@@ -30,6 +30,52 @@ app.mount("/web", StaticFiles(directory="web"), name="web")
 @app.get("/")
 async def root():
     return RedirectResponse("/web/host.html")
+
+# BASE_URL = f"https://api.telegram.org/bot{botToken}"
+
+# # Entrada para Telegram webhook
+# @app.post("/webhook")
+# async def handle_webhook(request: Request):
+#     data = await request.json()  # Get the JSON payload from Telegram
+#     print("Recebeu update:", json.dumps(data, indent=2))
+
+#     # Process the update
+#     if "message" in data:
+#         chat_id = data["message"]["chat"]["id"]
+#         text = data["message"].get("text", "")
+
+#         # Respond to the user
+#         reply_text = f"You said: {text}"
+#         send_message(chat_id, reply_text)
+
+#     return {"status": "ok"}
+
+# def send_message(chat_id: int, text: str):
+#     """
+#     Envia mensagem via Telegram bot.
+#     """
+#     url = f"{BASE_URL}/sendMessage"
+#     payload = {
+#         "chat_id": chat_id,
+#         "text": text,
+#     }
+#     response = requests.post(url, json=payload)
+#     if response.status_code != 200:
+#         print(f"Falha ao enviar mensagem: {response.text}")
+
+# # Configura o webhook do Telegram
+# @app.on_event("startup")
+# def set_webhook():
+#     webhook_url = "https://your-server-url/webhook" 
+#     url = f"{BASE_URL}/setWebhook"
+#     payload = {"url": webhook_url}
+#     response = requests.post(url, json=payload)
+#     if response.status_code == 200:
+#         print("Webhook set successfully!")
+#     else:
+#         print(f"Failed to set webhook: {response.text}")
+
+
 
 @app.get("/DC")
 async def DCstatus():
@@ -50,79 +96,49 @@ async def DCstatus():
 	GROUP BY DC;
 	"""
 
-	# sql =	"""
-	# 	WITH ranked_records AS (
-	# 		SELECT
-	# 			servidor.id,
-	# 			nome,
-	# 			DC,
-	# 			ts,
-	# 			state,
-	# 			temp,
-	# 			ROW_NUMBER() OVER (PARTITION BY servidor.id ORDER BY ts DESC) AS rnk
-	# 		FROM servidor_log
-	# 		INNER JOIN servidor ON servidor.id = servidor_log.id
-	# 	)
-	# 	SELECT 
-	# 		DC,
-	# 		ROUND( AVG(temp), 2) AS avg_temp,
-	# 		MAX(ts) AS latest_ts
-	# 	FROM ranked_records
-	# 	WHERE temp IS NOT NULL AND state > 0 AND rnk = 1
-	# 	GROUP BY DC;servidor_log;
-
-	# 	SELECT state, COUNT(*) AS N
-	# 	FROM (
-	# 		SELECT 
-	# 			id, 
-	# 			state, 
-	# 			ts,
-	# 			ROW_NUMBER() OVER (PARTITION BY id ORDER BY ts DESC) AS rnk
-	# 		FROM servidor_log
-	# 	) ultimosRegistros
-	# 	WHERE rnk = 1
-	# 	GROUP BY state;
-	# 	"""
 	db = DB()
 	db.cursor.execute(sql)
 	results = db.cursor.fetchall()
 	return JSONResponse(content=jsonable_encoder(results))	
-	# # Fetch all results from each statement
-	# results = []
-	# for result in db.cursor:
-	# # for result in cursor:
-	# 	try:
-	# 		# Only fetch rows for SELECT queries
-	# 		if result.with_rows:
-	# 			results.append(result.fetchall())
-	# 	except AttributeError:
-	# 		continue  # Skip non-SELECT queries
-
-	# db.cursor.close()
-
-	# # Separate the results for the two queries
-	# medias = results[0] if len(results) > 0 else []
-	# contadores = results[1] if len(results) > 1 else []
-	# # 	if result.with_rows:  # Process only if the result set contains rows
-	# # 		results.append(result.fetchall())
-
-	# # # Separate results for the two queries
-	# # medias, contadores = results
-
-	# # medias = db.cursor.fetchall()
-	# # db.commit()
-
-	# # db.cursor.execute(sqlContaONOFF)
-	# # contadores = db.cursor.fetchall()
-	# return JSONResponse(content=jsonable_encoder({"medias":medias,"contadores":contadores}))
-	# # return JSONResponse(content=jsonable_encoder({"medias":medias}))	
 
 @app.get("/hosts")
 async def host():
+	# sql = '''
+	# SELECT 
+	# 	servidor.*,
+	# 	servidor_log.ts,
+	# 	servidor_log.state,
+	# 	servidor_log.temp,
+	# 	servidor_log.rodada,
+	# 	servidor_log.DC AS DC_log
+	# FROM servidor
+	# INNER JOIN servidor_log ON servidor.id = servidor_log.id
+	# WHERE servidor_log.rodada = (
+	# 	SELECT MAX(rodada) FROM servidor_log
+	# );
+	# '''
+	sql="""
+		WITH ranked_records AS (
+			SELECT 
+				servidor.*,
+				servidor_log.ts,
+				servidor_log.state,
+				servidor_log.temp,
+				servidor_log.rodada,
+				servidor_log.DC AS DC_log,
+				ROW_NUMBER() OVER (PARTITION BY servidor.id ORDER BY servidor_log.ts DESC) AS rnk
+			FROM servidor
+			INNER JOIN servidor_log ON servidor.id = servidor_log.id
+			WHERE servidor.habilitado = 1 
+			AND servidor_log.rodada = (SELECT MAX(rodada) FROM servidor_log)
+		)
+		SELECT * 
+		FROM ranked_records
+		WHERE rnk = 1;
+
+	"""
 	db = DB()
-	# somente Hosts que não são VMs 'V'
-	db.cursor.execute("Select * from servidor")
-	# db.cursor.execute("Select id,nome,comentario,CONVERT(estado,CHAR)as estado,CONVERT(tipo,CHAR) as tipo,cpu,n,mem from maq where tipo!='V'")
+	db.cursor.execute(sql)
 	tudo = db.cursor.fetchall()
 	return JSONResponse(content=jsonable_encoder(tudo))
 	
