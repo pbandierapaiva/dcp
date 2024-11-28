@@ -9,6 +9,10 @@ import json
 class GridServidores(html.DIV):
     def __init__(self):
         html.DIV.__init__(self,Class="grid-container")
+        self.dcDIS = html.DIV(Class="w3-panel w3-topbar w3-bottombar w3-border-blue w3-pale-blue")
+        self.dcSTI = html.DIV(Class="w3-panel w3-topbar w3-bottombar w3-border-blue w3-pale-blue")
+        self <= self.dcSTI
+        self <= self.dcDIS 
         self.loadServerData()
         self.servidores = []
     def loadServerData(self):
@@ -19,7 +23,11 @@ class GridServidores(html.DIV):
         for item in hostlist:
             serv =  CaixaServidor(item)
             self.servidores.append(serv)
-            self <= serv
+            if item["DC"]=="DIS":
+                self.dcDIS <= serv
+            else:
+                self.dcSTI <= serv
+            # self <= serv
     def update(self):
         for s in self.servidores:
             s.update()
