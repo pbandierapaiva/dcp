@@ -41,10 +41,6 @@ class Cabecalho(html.DIV):
     def confirmaCredencial(self, resposta):
         self.autenticado=resposta
         self.update()
-    
-
-
-
 
 class GridServidores(html.DIV):
     def __init__(self):
@@ -65,11 +61,9 @@ class GridServidores(html.DIV):
             senha = ""
         else:
             senha = self.cabeca.autenticado
-        # alert(self.cabeca.autenticado)
-        dados = {'password': senha} #self.cabeca.autenticado}
+        dados = {'password': senha} 
         ajax.post("/hosts", data=json.dumps(dados), oncomplete=self.dataLoaded,
             headers={"Content-Type":"application/json"})
-        # ajax.post("/hosts", data=json.dumps(dados), oncomplete=self.dataLoaded)
     def dataLoaded(self, res):
         hostlist = res.json
         for item in hostlist:
@@ -175,6 +169,4 @@ class Principal(html.DIV):
 
 
 document <= Principal()
-# document <= Cabecalho()
-# document <= GridServidores()
-    
+
