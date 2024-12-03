@@ -117,3 +117,5 @@ class RadioEstado(html.DIV):
 			if self.estadoOFF.checked: return "0"
 			if self.estadoON.checked: return "1"
 			return None
+
+

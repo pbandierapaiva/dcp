@@ -31,3 +31,6 @@ class HostInfo(BaseModel):
 	cpu: Optional[str]
 	n: Optional[int]
 	mem: Optional[int]
+
+class Autentica(BaseModel):
+	password: str

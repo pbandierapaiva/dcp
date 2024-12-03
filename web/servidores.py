@@ -8,34 +8,72 @@ from utils import *
 import json
 
 class Cabecalho(html.DIV):
-    def __init__(self):
+    def __init__(self, updateHook):
         html.DIV.__init__(self, Class="w3-bar w3-card-2 w3-blue notranslate")
         self.innerHTML = "DCP-DIS-EPM-Unifesp"
+        self.autenticado=None
+        self.botaoAuth = html.BUTTON("Autentica",Class="w3-btn w3-grey w3-round w3-margin-left ")
+        self.botaoAuth.bind("click", self.pedeCredencial)
+        self <= self.botaoAuth
+        self.statusData = html.SPAN()
+        self <= self.statusData
+        self.updateHook = updateHook
         self.update()
     def update(self):
+        if not self.autenticado:
+            self.botaoAuth.innerHTML = "Autentica"
+        else:
+            self.botaoAuth.innerHTML = "Logout"
         ajax.get("/DC", oncomplete=self.dataLoaded)
     def dataLoaded(self, res):
         medias = res.json 
+        self.statusData.innerHTML=""
         for lin in medias:
-        #    self.innerHTML += "  %s : %4.2f ON %s / OFF %s "%(lin["DC"], lin['stateON'], lin['stateOFF'], lin['avg_temp'])
-            self <= html.SPAN( "  %s : %4.2f | ON %s / OFF %s "%(lin["DC"], lin['avg_temp'], lin['stateON'], lin['stateOFF']),
+            self.statusData <= html.SPAN( "  %s : %4.2f | ON %s / OFF %s "%(lin["DC"], lin['avg_temp'], lin['stateON'], lin['stateOFF']),
                                         Class="w3-right w3-margin-left w3-margin-right")
+        self.updateHook()
+    def pedeCredencial(self, evt):
+        if not self.autenticado:
+            PegaTexto("Autentica", self.confirmaCredencial)
+        else:
+            self.autenticado=None
+            self.update()
+    def confirmaCredencial(self, resposta):
+        self.autenticado=resposta
+        self.update()
+    
+
+
+
 
 class GridServidores(html.DIV):
     def __init__(self):
-        html.DIV.__init__(self,Class="w3-container ")
+        html.DIV.__init__(self) 
+        self.cabeca = Cabecalho(self.loadServerData)
         self.dcDIS = html.DIV(Class="w3-row w3-topbar w3-bottombar w3-border-blue w3-pale-blue")
         self.dcSTI = html.DIV(Class="w3-row w3-topbar w3-bottombar w3-border-blue w3-pale-blue")
+        self <= self.cabeca
         self <= self.dcSTI
         self <= self.dcDIS 
-        self.loadServerData()
         self.servidores = []
+        self.loadServerData()
     def loadServerData(self):
-        ajax.get("/hosts", oncomplete=self.dataLoaded)
+        self.servidores = []
+        self.dcSTI.innerHTML=""
+        self.dcDIS.innerHTML=""
+        if self.cabeca.autenticado is None:
+            senha = ""
+        else:
+            senha = self.cabeca.autenticado
+        # alert(self.cabeca.autenticado)
+        dados = {'password': senha} #self.cabeca.autenticado}
+        ajax.post("/hosts", data=json.dumps(dados), oncomplete=self.dataLoaded,
+            headers={"Content-Type":"application/json"})
+        # ajax.post("/hosts", data=json.dumps(dados), oncomplete=self.dataLoaded)
     def dataLoaded(self, res):
         hostlist = res.json
         for item in hostlist:
-            serv =  CaixaServidor(item)
+            serv =  CaixaServidor(item, self.cabeca.autenticado)
             self.servidores.append(serv)
             if item["DC"]=="DIS":
                 self.dcDIS <= serv
@@ -46,12 +84,15 @@ class GridServidores(html.DIV):
             s.update()
 
 class CaixaServidor(html.DIV):
-    def __init__(self, data):
+    def __init__(self, data, autentica=None):
         html.DIV.__init__(self,Class="w3-col m3 w3-round w3-border")                   # "w3-card-4 server-box")
         self.id = data["id"]
         self.nome = data["Nome"]
         self.ipmi = data["IPMI_IP"]
-        self.pwipmi = data["senhaIPMI"]
+        if "senhaIPMI" in data:
+            self.pwipmi = data["senhaIPMI"]
+        else:
+            self.pwipmi = None
         self.hostip = data["HostIP"]
         self.usrip = data["IP_USER"]
         self.dc = data["DC"]
@@ -66,17 +107,17 @@ class CaixaServidor(html.DIV):
         texto = html.SPAN(f"{self.id} - {self.nome}",title=self.desc, 
             Class="w3-left")
         
-        hardOff = html.I("do_not_disturb", 
-            Class="w3-right material-icons w3-hover-pointer", 
-            style="color:red", title="HARD OFF")
-        hardOff.bind("click", self.confirmaHardOFF)
-        alteraEstado = html.I("power_settings_new", 
-            Class="w3-right material-icons w3-hover-pointer", 
-            style="color:white")
-        alteraEstado.bind("click", self.confirmSoftOnOff)
-
-        cabeca <= hardOff
-        cabeca <= alteraEstado
+        if autentica:
+            hardOff = html.I("do_not_disturb", 
+                Class="w3-right material-icons w3-hover-pointer", 
+                style="color:red", title="HARD OFF")
+            hardOff.bind("click", self.confirmaHardOFF)
+            alteraEstado = html.I("power_settings_new", 
+                Class="w3-right material-icons w3-hover-pointer", 
+                style="color:white")
+            alteraEstado.bind("click", self.confirmSoftOnOff)
+            cabeca <= hardOff
+            cabeca <= alteraEstado
         cabeca <= texto
         self <= cabeca
 
@@ -126,7 +167,14 @@ class botaoLink(html.BUTTON):
     def abreJanela(self,evt):
         window.open(self.link, "_blank")
 
-document <= Cabecalho()
+class Principal(html.DIV):
+    def __init__(self):
+        html.DIV.__init__(self)
+        self.grade = GridServidores()
+        self <= self.grade
 
-document <= GridServidores()
- 
+
+document <= Principal()
+# document <= Cabecalho()
+# document <= GridServidores()
+    
