@@ -3,6 +3,8 @@ from browser import html, ajax, alert, confirm, prompt
 
 from browser.widgets.dialog import InfoDialog, Dialog
 
+from utils import *
+
 import json
 
 class Cabecalho(html.DIV):
@@ -15,7 +17,7 @@ class Cabecalho(html.DIV):
     def dataLoaded(self, res):
         medias = res.json 
         for lin in medias:
-            self.innerHTML += " | %s %s / %s : %4.2f"%(lin["DC"], lin['stateON'], lin['stateOFF'], lin['avg_temp'])
+            self.innerHTML += " | %s ON %s / OFF %s : %4.2f"%(lin["DC"], lin['stateON'], lin['stateOFF'], lin['avg_temp'])
 
 class GridServidores(html.DIV):
     def __init__(self):
@@ -57,15 +59,25 @@ class CaixaServidor(html.DIV):
         self.desc = data["Descricao"]
         self.temp = data["temp"]
         self.status = data["state"]
-        # cabeca = html.HEADER( self.id+"-"+self.nome, Class="w3-container ")
-        # self.caixa = html.DIV(Class="w3-container ")
-        # self <= cabeca
-        # self<= self.caixa
 
         # Header
-        cabeca = html.HEADER(f"{self.id} - {self.nome}", 
-            Class="w3-container w3-padding w3-dark-grey",
-            title=self.desc)
+        cabeca = html.HEADER( Class="w3-container w3-row w3-padding w3-dark-grey")
+
+        texto = html.SPAN(f"{self.id} - {self.nome}",title=self.desc, 
+            Class="w3-left")
+        
+        hardOff = html.I("do_not_disturb", 
+            Class="w3-right material-icons w3-hover-pointer", 
+            style="color:red", title="HARD OFF")
+        hardOff.bind("click", self.confirmaHardOFF)
+        alteraEstado = html.I("power_settings_new", 
+            Class="w3-right material-icons w3-hover-pointer", 
+            style="color:white")
+        alteraEstado.bind("click", self.confirmSoftOnOff)
+
+        cabeca <= hardOff
+        cabeca <= alteraEstado
+        cabeca <= texto
         self <= cabeca
 
         corcaixa=""
@@ -86,11 +98,27 @@ class CaixaServidor(html.DIV):
         area2 = html.DIV(f"Type: {self.tipo}", Class=f"w3-col s4  w3-padding")
         area3 = html.DIV( "---", Class=f"w3-col s4  w3-padding")
         if self.temp:
-            area3.innerHTML = f"Temp: {self.temp}°C"
+            area3.innerHTML = f"{self.temp}°C"
         grid_container <= area1
         grid_container <= area2
         grid_container <= area3
         self <= grid_container
+    def confirmaHardOFF(self, evt):		
+        Confirma("DESLIGAR - HARD OFF "+self.nome+ "?", self.hardOFF)
+    def hardOFF(self):
+        alert("HARD OFF")
+    def confirmSoftOnOff(self, evt):
+        if self.status:
+            Confirma("Confirma SOFT OFF?", self.softOff)
+        else:
+            Confirma("Confirma ON?", self.powerON)
+    def softOff(self):
+        alert("SOFT")
+    def powerON(self):
+        alert("ON")
+       
+
+
 
 class botaoLink(html.BUTTON):
     def __init__(self, texto, url):

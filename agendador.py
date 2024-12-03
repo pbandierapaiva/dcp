@@ -1,6 +1,7 @@
 ## agendador.py agendaMonitoramento()
 from apscheduler.schedulers.background import BackgroundScheduler
 from apscheduler.triggers.cron import CronTrigger
+from conexao import MINUTOAGENDADO
 
 import subprocess
 
@@ -18,7 +19,7 @@ def agendaMonitoramento():
 
     scheduler.add_job(
         tarefaAgendada,
-        CronTrigger(minute="*/3"),  
+        CronTrigger(minute=MINUTOAGENDADO),  
         max_instances=3,
         misfire_grace_time=250,
         coalesce=True
