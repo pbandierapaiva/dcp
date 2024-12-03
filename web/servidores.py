@@ -17,7 +17,9 @@ class Cabecalho(html.DIV):
     def dataLoaded(self, res):
         medias = res.json 
         for lin in medias:
-            self.innerHTML += " | %s ON %s / OFF %s : %4.2f"%(lin["DC"], lin['stateON'], lin['stateOFF'], lin['avg_temp'])
+        #    self.innerHTML += "  %s : %4.2f ON %s / OFF %s "%(lin["DC"], lin['stateON'], lin['stateOFF'], lin['avg_temp'])
+            self <= html.SPAN( "  %s : %4.2f | ON %s / OFF %s "%(lin["DC"], lin['avg_temp'], lin['stateON'], lin['stateOFF']),
+                                        Class="w3-right w3-margin-left w3-margin-right")
 
 class GridServidores(html.DIV):
     def __init__(self):
@@ -32,7 +34,6 @@ class GridServidores(html.DIV):
         ajax.get("/hosts", oncomplete=self.dataLoaded)
     def dataLoaded(self, res):
         hostlist = res.json
-        # alert(len(hostlist))
         for item in hostlist:
             serv =  CaixaServidor(item)
             self.servidores.append(serv)
@@ -40,7 +41,6 @@ class GridServidores(html.DIV):
                 self.dcDIS <= serv
             else:
                 self.dcSTI <= serv
-            # self <= serv
     def update(self):
         for s in self.servidores:
             s.update()
@@ -116,9 +116,6 @@ class CaixaServidor(html.DIV):
         alert("SOFT")
     def powerON(self):
         alert("ON")
-       
-
-
 
 class botaoLink(html.BUTTON):
     def __init__(self, texto, url):

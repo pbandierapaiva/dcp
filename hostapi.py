@@ -97,20 +97,6 @@ async def DCstatus():
 
 @app.get("/hosts")
 async def host():
-	# sql = '''
-	# SELECT 
-	# 	servidor.*,
-	# 	servidor_log.ts,
-	# 	servidor_log.state,
-	# 	servidor_log.temp,
-	# 	servidor_log.rodada,
-	# 	servidor_log.DC AS DC_log
-	# FROM servidor
-	# INNER JOIN servidor_log ON servidor.id = servidor_log.id
-	# WHERE servidor_log.rodada = (
-	# 	SELECT MAX(rodada) FROM servidor_log
-	# );
-	# '''
 	sql="""
 		WITH ranked_records AS (
 			SELECT 
