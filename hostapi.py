@@ -9,8 +9,9 @@ from fastapi.responses import RedirectResponse
 
 # Para IPMI
 from pyghmi.ipmi import command as IPMI
+from pyghmi.exceptions import IpmiException  # Import IpmiException
 
-from database import DB, NetDev, HostInfo, Autentica 
+from database import DB, NetDev, HostInfo, Autentica, ControlaPower
 from agendador import agendaMonitoramento
 from conexao import conexao, botToken
 
@@ -135,5 +136,29 @@ async def host(autentica : Autentica):
 	db = DB()
 	db.cursor.execute(sql)
 	tudo = db.cursor.fetchall()
-	return JSONResponse(content=jsonable_encoder(tudo))
+	res = {} 
+	if autentica.password==ADMIN_PASSWORD:
+		res["Autenticado"]= True
+	else:
+		res["Autenticado"]= False
+	res["result"] = tudo
+	return JSONResponse(content=jsonable_encoder(res))
 
+@app.post("/hosts/power")
+async def host( controla : ControlaPower):
+	print(controla.action, controla.ipmiip)
+	try:	
+		ipmi_conn = IPMI.Command(bmc=controla.ipmiip, userid='admin', password=controla.password) #, keepalive=False)
+	except IPMI.IpmiException as e:
+		return JSONResponse(content=jsonable_encoder({"ERROR":e, "type":"Connection"}))
+	try:
+		if controla.action=='status':
+			retorno = ipmi_conn.get_power()
+			print(retorno)
+		else:
+			retorno = ipmi_conn.set_power(controla.action, wait=True)
+	except IpmiException as e:
+		return JSONResponse(content=jsonable_encoder({"ERROR":e, "type":"Action", "command":controla.action}))
+	except Exception as e:
+		return JSONResponse(content=jsonable_encoder({"ERROR":e}))
+	return JSONResponse(content=jsonable_encoder(retorno))

@@ -15,7 +15,7 @@ class Cabecalho(html.DIV):
 
 
 class Alerta(html.DIV):
-	def __init__(self, msg, tit="Atenção"):
+	def __init__(self, msg, tit="Atenção", senha=False):
 		html.DIV.__init__(self, Class="w3-modal")
 		self.modal = html.DIV(Class="w3-modal-content")
 		self.modal <= html.DIV(Class="w3-container w3-blue-grey") <= html.P(tit)
@@ -35,10 +35,10 @@ class Alerta(html.DIV):
 		self.style.display='none'
 
 class PegaTexto(Alerta):
-	def __init__(self, msg, callback, tit="Entre com texto"):
+	def __init__(self, msg, callback, tit="Entre com texto", senha=False):
 		Alerta.__init__(self, msg, tit)
 		self.callback = callback
-		self.inputCpo = html.INPUT(autofocus=True)
+		self.inputCpo = html.INPUT(autofocus=True, type="password")
 		self.inputCpo.className = "w3-input w3-border"
 		botaoConfirma = html.DIV("OK", Class="w3-button w3-block")
 		botaoConfirma.bind("click", self.confirma)

@@ -11,19 +11,21 @@ class Cabecalho(html.DIV):
     def __init__(self, updateHook):
         html.DIV.__init__(self, Class="w3-bar w3-card-2 w3-blue notranslate")
         self.innerHTML = "DCP-DIS-EPM-Unifesp"
-        self.autenticado=None
+        self.autenticado=""
         self.botaoAuth = html.BUTTON("Autentica",Class="w3-btn w3-grey w3-round w3-margin-left ")
         self.botaoAuth.bind("click", self.pedeCredencial)
         self <= self.botaoAuth
         self.statusData = html.SPAN()
         self <= self.statusData
         self.updateHook = updateHook
+        self.exibeBotaoLogin()
         self.update()
-    def update(self):
-        if not self.autenticado:
+    def exibeBotaoLogin(self):
+        if self.autenticado=="":
             self.botaoAuth.innerHTML = "Autentica"
         else:
             self.botaoAuth.innerHTML = "Logout"
+    def update(self):
         ajax.get("/DC", oncomplete=self.dataLoaded)
     def dataLoaded(self, res):
         medias = res.json 
@@ -36,7 +38,7 @@ class Cabecalho(html.DIV):
         if not self.autenticado:
             PegaTexto("Autentica", self.confirmaCredencial)
         else:
-            self.autenticado=None
+            self.autenticado=""
             self.update()
     def confirmaCredencial(self, resposta):
         self.autenticado=resposta
@@ -51,22 +53,21 @@ class GridServidores(html.DIV):
         self <= self.cabeca
         self <= self.dcSTI
         self <= self.dcDIS 
-        self.servidores = []
-        self.loadServerData()
+        # self.loadServerData()
     def loadServerData(self):
         self.servidores = []
         self.dcSTI.innerHTML=""
         self.dcDIS.innerHTML=""
-        if self.cabeca.autenticado is None:
-            senha = ""
-        else:
-            senha = self.cabeca.autenticado
-        dados = {'password': senha} 
-        ajax.post("/hosts", data=json.dumps(dados), oncomplete=self.dataLoaded,
+        ajax.post("/hosts", 
+            data=json.dumps({'password':self.cabeca.autenticado}), 
+            oncomplete=self.dataLoaded,
             headers={"Content-Type":"application/json"})
     def dataLoaded(self, res):
-        hostlist = res.json
-        for item in hostlist:
+        resposta = res.json
+        if self.cabeca.autenticado!="" and not resposta["Autenticado"]: #senha errada
+            self.cabeca.autenticado=""
+        self.cabeca.exibeBotaoLogin()
+        for item in resposta["result"]:
             serv =  CaixaServidor(item, self.cabeca.autenticado)
             self.servidores.append(serv)
             if item["DC"]=="DIS":
@@ -79,7 +80,8 @@ class GridServidores(html.DIV):
 
 class CaixaServidor(html.DIV):
     def __init__(self, data, autentica=None):
-        html.DIV.__init__(self,Class="w3-col m3 w3-round w3-border")                   # "w3-card-4 server-box")
+        html.DIV.__init__(self,Class="w3-col m2 w3-round w3-border")
+        self.autentica = autentica
         self.id = data["id"]
         self.nome = data["Nome"]
         self.ipmi = data["IPMI_IP"]
@@ -94,24 +96,31 @@ class CaixaServidor(html.DIV):
         self.desc = data["Descricao"]
         self.temp = data["temp"]
         self.status = data["state"]
-
+        self.updateAparencia()
+    def updateAparencia(self):
+        self.innerHTML=""
         # Header
-        cabeca = html.HEADER( Class="w3-container w3-row w3-padding w3-dark-grey")
-
+        cabeca = html.HEADER( Class="w3-container w3-row w3-dark-grey")
         texto = html.SPAN(f"{self.id} - {self.nome}",title=self.desc, 
             Class="w3-left")
         
-        if autentica:
-            hardOff = html.I("do_not_disturb", 
+        if self.autentica:
+            self.hardOff = html.I("do_not_disturb", 
                 Class="w3-right material-icons w3-hover-pointer", 
                 style="color:red", title="HARD OFF")
-            hardOff.bind("click", self.confirmaHardOFF)
-            alteraEstado = html.I("power_settings_new", 
+            self.hardOff.bind("click", self.confirmaHardOFF)
+            self.alteraEstado = html.I("power_settings_new", 
                 Class="w3-right material-icons w3-hover-pointer", 
                 style="color:white")
-            alteraEstado.bind("click", self.confirmSoftOnOff)
-            cabeca <= hardOff
-            cabeca <= alteraEstado
+            self.alteraEstado.bind("click", self.confirmSoftOnOff)
+            self.atualiza = html.I("restart_alt", 
+                Class="w3-right material-icons w3-hover-pointer", 
+                style="color:white")
+            self.atualiza.bind("click", self.atualizaEstado)
+            
+            cabeca <= self.alteraEstado
+            cabeca <= self.hardOff
+            cabeca <= self.atualiza
         cabeca <= texto
         self <= cabeca
 
@@ -129,29 +138,56 @@ class CaixaServidor(html.DIV):
         self.classList.add(corcaixa)
 
         grid_container = html.DIV(Class="w3-row-padding w3-padding")
-        area1 = html.DIV(botaoLink("IPMI", f"http://{self.ipmi}"), Class=f"w3-col s4  w3-padding")
-        area2 = html.DIV(f"Type: {self.tipo}", Class=f"w3-col s4  w3-padding")
-        area3 = html.DIV( "---", Class=f"w3-col s4  w3-padding")
+        area1 = html.DIV(botaoLink("IPMI", f"http://{self.ipmi}"), Class=f"w3-col s4") #  w3-padding")
+        area2 = html.DIV(f"{self.tipo}", Class=f"w3-col s4") #  w3-padding")
+        area3 = html.DIV( "---", Class=f"w3-col s4") #  w3-padding")
         if self.temp:
             area3.innerHTML = f"{self.temp}°C"
         grid_container <= area1
         grid_container <= area2
         grid_container <= area3
         self <= grid_container
-    def confirmaHardOFF(self, evt):		
-        Confirma("DESLIGAR - HARD OFF "+self.nome+ "?", self.hardOFF)
+    def confirmaHardOFF(self, evt):	
+        conf = html.SPAN("DESLIGAR - HARD OFF "+self.nome+ "?", Class="w3-red")	
+        Confirma(conf, self.hardOFF)
+    def atualizaEstado(self, evt):
+        self.atualiza.classList.add("w3-hide")
+        self.setPower("status")
     def hardOFF(self):
         alert("HARD OFF")
+        self.setPower("off")
     def confirmSoftOnOff(self, evt):
         if self.status:
             Confirma("Confirma SOFT OFF?", self.softOff)
         else:
             Confirma("Confirma ON?", self.powerON)
     def softOff(self):
-        alert("SOFT")
+        # alert("SOFT")
+        self.setPower("shutdown")
     def powerON(self):
-        alert("ON")
+        # alert("ON")
+        self.setPower("on")
 
+    def setPower(self, action):
+        ajax.post("/hosts/power", 
+            data=json.dumps({
+                'password': self.pwipmi,
+                'ipmiip':self.ipmi,
+                'action':action}), 
+            oncomplete=self.powerActionExecuted,
+            headers={"Content-Type":"application/json"})
+    def powerActionExecuted(self,res):
+        resposta = res.json
+        try:
+            if resposta["powerstate"]=='off':
+                self.status = False
+            elif resposta["powerstate"]=='on':
+                
+                self.status = True
+        except:
+            alert(str(resposta))
+        self.updateAparencia()
+        
 class botaoLink(html.BUTTON):
     def __init__(self, texto, url):
         html.BUTTON.__init__(self,Class="w3-round w3-border") 
@@ -161,7 +197,7 @@ class botaoLink(html.BUTTON):
     def abreJanela(self,evt):
         window.open(self.link, "_blank")
 
-class Principal(html.DIV):
+class Principal(html.DIV): 
     def __init__(self):
         html.DIV.__init__(self)
         self.grade = GridServidores()

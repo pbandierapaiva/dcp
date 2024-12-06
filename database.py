@@ -34,3 +34,8 @@ class HostInfo(BaseModel):
 
 class Autentica(BaseModel):
 	password: str
+
+class ControlaPower(BaseModel):
+	ipmiip: str
+	password: str
+	action: str
