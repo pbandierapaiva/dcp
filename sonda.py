@@ -69,8 +69,8 @@ def verificaStatus():
         SELECT 
         DC,
         ROUND(AVG(temp), 2) AS avg_temp,
-        SUM(CASE WHEN state = 0 THEN 1 ELSE 0 END) AS stateON,
-        SUM(CASE WHEN state = 1 THEN 1 ELSE 0 END) AS stateOFF,
+        SUM(CASE WHEN state = 0 THEN 1 ELSE 0 END) AS stateOFF,
+        SUM(CASE WHEN state = 1 THEN 1 ELSE 0 END) AS stateON,
         rodada
         FROM servidor_log
         WHERE rodada = (
@@ -84,7 +84,7 @@ def verificaStatus():
     
     for l in results:
         if ( l["DC"]=="DIS" and l["avg_temp"]>30 ) \
-            or ( l["DC"]=="STI" and l["avg_temp"]>34 ):
+            or ( l["DC"]=="STI" and l["avg_temp"]>35 ):
             print("ATENÇÃO!\n",str(l))
             enviaTelegram(results)
         else:
