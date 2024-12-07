@@ -11,20 +11,37 @@ class Cabecalho(html.DIV):
     def __init__(self, updateHook):
         html.DIV.__init__(self, Class="w3-bar w3-card-2 w3-blue notranslate")
         self.innerHTML = "DCP-DIS-EPM-Unifesp"
+        self.updateHook = updateHook
         self.autenticado=""
-        self.botaoAuth = html.BUTTON("Autentica",Class="w3-btn w3-grey w3-round w3-margin-left ")
-        self.botaoAuth.bind("click", self.pedeCredencial)
-        self <= self.botaoAuth
+        self.mode="grid"
+        
+        self.userIcon= self.userIcon = html.I("no_accounts", 
+                Class="material-icons w3-hover-pointer w3-right", 
+                style="color:white")
+        self.userIcon.bind("click", self.pedeCredencial)
+        self <= self.userIcon
+
+        self.grafViewIcon = html.I("ssid_chart", 
+                Class="material-icons w3-hover-pointer w3-right", 
+                style="color:white")
+        self.grafViewIcon.bind("click", self.setModeTemp)   
+        self <= self.grafViewIcon
+
+        self.gridViewIcon = html.I("grid_on", 
+                Class="material-icons w3-hover-pointer w3-right", 
+                style="color:white")
+        self.gridViewIcon.bind("click", self.setModeGrid)   
+        self <= self.gridViewIcon
+        
         self.statusData = html.SPAN()
         self <= self.statusData
-        self.updateHook = updateHook
-        self.exibeBotaoLogin()
         self.update()
-    def exibeBotaoLogin(self):
-        if self.autenticado=="":
-            self.botaoAuth.innerHTML = "Autentica"
-        else:
-            self.botaoAuth.innerHTML = "Logout"
+    def setModeTemp(self, evt):
+        self.mode="temp"
+        self.updateHook()
+    def setModeGrid(self, evt):
+        self.mode="grid"
+        self.updateHook()
     def update(self):
         ajax.get("/DC", oncomplete=self.dataLoaded)
     def dataLoaded(self, res):
@@ -39,21 +56,31 @@ class Cabecalho(html.DIV):
             PegaTexto("Autentica", self.confirmaCredencial)
         else:
             self.autenticado=""
+            self.confirmaCredencial("")
             self.update()
     def confirmaCredencial(self, resposta):
         self.autenticado=resposta
+        if self.autenticado=="":
+            self.userIcon.innerHTML=""
+            self.userIcon <= html.I("no_accounts", 
+                Class="material-icons w3-hover-pointer w3-right", 
+                style="color:white")
+        else:
+            self.userIcon.innerHTML=""
+            self.userIcon <= html.I("person", 
+                Class="material-icons w3-hover-pointer w3-right", 
+                style="color:white")
         self.update()
 
 class GridServidores(html.DIV):
-    def __init__(self):
+    def __init__(self, cabeca):
         html.DIV.__init__(self) 
-        self.cabeca = Cabecalho(self.loadServerData)
+        self.cabeca = cabeca
         self.dcDIS = html.DIV(Class="w3-row w3-topbar w3-bottombar w3-border-blue w3-pale-blue")
         self.dcSTI = html.DIV(Class="w3-row w3-topbar w3-bottombar w3-border-blue w3-pale-blue")
-        self <= self.cabeca
         self <= self.dcSTI
         self <= self.dcDIS 
-        # self.loadServerData()
+        self.loadServerData()
     def loadServerData(self):
         self.servidores = []
         self.dcSTI.innerHTML=""
@@ -65,8 +92,7 @@ class GridServidores(html.DIV):
     def dataLoaded(self, res):
         resposta = res.json
         if self.cabeca.autenticado!="" and not resposta["Autenticado"]: #senha errada
-            self.cabeca.autenticado=""
-        self.cabeca.exibeBotaoLogin()
+            self.cabeca.confirmaCredencial("")
         for item in resposta["result"]:
             serv =  CaixaServidor(item, self.cabeca.autenticado)
             self.servidores.append(serv)
@@ -102,7 +128,7 @@ class CaixaServidor(html.DIV):
         # Header
         cabeca = html.HEADER( Class="w3-container w3-row w3-dark-grey")
         texto = html.SPAN(f"{self.id} - {self.nome}",title=self.desc, 
-            Class="w3-left")
+            Class="w3-left")    
         
         if self.autentica:
             self.hardOff = html.I("do_not_disturb", 
@@ -200,8 +226,25 @@ class botaoLink(html.BUTTON):
 class Principal(html.DIV): 
     def __init__(self):
         html.DIV.__init__(self)
-        self.grade = GridServidores()
-        self <= self.grade
+        self.autentica=""
+        self.cabeca = Cabecalho(self.updateView)
+        self <= self.cabeca
+        self.corpo = html.DIV()
+        self <= self.corpo
+
+
+    def updateView(self):
+        self.corpo.innerHTML = ""
+        if self.cabeca.mode=="grid":
+            self.corpo <= GridServidores(self.cabeca)
+            self.cabeca.grafViewIcon.style = {'color':'white'}
+            self.cabeca.gridViewIcon.style = {'color':'grey'}
+        elif self.cabeca.mode=="temp":
+            self.corpo.style={'height':"90vh", 'width':"100vw"}
+            tempSeries = html.IFRAME(src="/temps", style={'height':"100%", 'width':"100%"})
+            self.corpo <= tempSeries
+            self.cabeca.gridViewIcon.style = {'color':'white'}
+            self.cabeca.grafViewIcon.style = {'color':'grey'}
 
 
 document <= Principal()

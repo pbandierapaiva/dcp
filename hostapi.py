@@ -7,6 +7,14 @@ from fastapi.encoders import jsonable_encoder
 from fastapi.responses import JSONResponse
 from fastapi.responses import RedirectResponse
 
+# Para gráficos de temperatura:
+import matplotlib.pyplot as plt
+import io
+import base64
+from datetime import datetime
+import pandas as pd
+import matplotlib.dates as mdates
+
 # Para IPMI
 from pyghmi.ipmi import command as IPMI
 from pyghmi.exceptions import IpmiException  # Import IpmiException
@@ -76,7 +84,96 @@ async def root():
 #     else:
 #         print(f"Failed to set webhook: {response.text}")
 
+# Sample data: timestamps and average temperatures
+timestamps = [
+    "2024-12-01 12:00", "2024-12-02 12:00", "2024-12-03 12:00",
+    "2024-12-04 12:00", "2024-12-05 12:00"
+]
+temperatures = [15.5, 17.3, 14.8, 16.1, 15.9]
 
+# Convert timestamps to datetime objects
+timestamps = [datetime.strptime(ts, "%Y-%m-%d %H:%M") for ts in timestamps]
+
+@app.get("/temps", response_class=HTMLResponse)
+def home():
+	sql = """
+	SELECT 
+	DC,
+	ROUND(AVG(temp), 2) AS avg_temp,
+	SUM(CASE WHEN state = 1 THEN 1 ELSE 0 END) AS stateON,
+	SUM(CASE WHEN state = 0 THEN 1 ELSE 0 END) AS stateOFF,
+	rodada
+	FROM servidor_log
+	GROUP BY rodada, DC;
+	"""
+	db = DB()
+	db.cursor.execute(sql)
+	rows = db.cursor.fetchall()
+	columns = [desc[0] for desc in db.cursor.description]
+	data = pd.DataFrame(rows, columns=columns)
+
+	# Convert 'rodada' column to datetime
+	data["rodada"] = pd.to_datetime(data["rodada"])
+	data["date"] = data["rodada"].dt.date  # Extract the date
+	data["time"] = data["rodada"].dt.time  # Extract the time
+
+	# Combine 'date' and 'time' into full datetime objects
+	data["datetime"] = data.apply(lambda row: datetime.combine(row["date"], row["time"]), axis=1)
+
+	# Group data by 'date' and plot separate lines for each date
+	plt.figure(figsize=(10, 5))
+	colors = {'DIS': 'green', 'STI': 'blue'}  # Define colors for each DC category
+	
+	added_labels =set()
+
+	for (dc, date), group in data.groupby(["DC", "date"]):
+		label = dc if dc not in added_labels else None  # Add label only for first occurrence
+		plt.plot(
+			group["datetime"],  # Use full datetime objects for x-axis
+			group["avg_temp"],
+			linestyle='-',  # Line without markers
+			label=label,
+			color=colors[dc]
+		)
+		added_labels.add(dc)
+
+
+	# Format the x-axis to show time in HH:MM format
+	plt.gca().xaxis.set_major_formatter(mdates.DateFormatter("%H:%M"))
+
+	# Add details to the chart
+	plt.title("Temperatura média dos servidores (intervalos de 3min)")
+	plt.xlabel("Horário")
+	plt.ylabel("Temp. média (°C)")
+	plt.grid(True)
+	plt.legend(title="Datacenter")
+
+	# Save the plot to a BytesIO object
+	img = io.BytesIO()
+	plt.savefig(img, format="png")
+	img.seek(0)
+	plt.close()
+
+	# Encode the plot to Base64 to embed in HTML
+	plot_url = base64.b64encode(img.getvalue()).decode("utf8")
+
+	# Render the HTML with the plot
+	html = f"""
+	<!DOCTYPE html>
+	<html lang="en">
+	<head>
+		<title>Temperaturas</title>
+	</head>
+	<body>
+		<!-- <h1>Temperatura nos Datacenters 48h</h1>
+		-->
+		<img src="data:image/png;base64,{plot_url}" alt="Grafico de temperaturas">
+	</body>
+	</html>
+	"""
+	return HTMLResponse(content=html)
+
+	
 
 @app.get("/DC")
 async def DCstatus():
@@ -95,8 +192,6 @@ async def DCstatus():
 	)
 	GROUP BY DC;
 	"""
-	
-
 	db = DB()
 	db.cursor.execute(sql)
 	results = db.cursor.fetchall()
