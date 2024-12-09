@@ -3,6 +3,8 @@ ambiente
 ambiente/*
 ambiente-note/*
 conexao.py
+*.key
+dcp_known_hosts
 data/*
 venv
 brython*

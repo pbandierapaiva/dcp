@@ -259,3 +259,24 @@ async def host( controla : ControlaPower):
 	except Exception as e:
 		return JSONResponse(content=jsonable_encoder({"ERROR":e}))
 	return JSONResponse(content=jsonable_encoder(retorno))
+
+@app.get("/hosts/{hostip}")
+async def hostvms(hostip):
+	client = SSHClient()
+	client.set_missing_host_key_policy(AutoAddPolicy())
+	client.connect(hostip, username='root', key_filename="dcp_ecdsa.key")
+	stdin, stdout, stderr = client.exec_command("virsh list --all")
+
+	stdout.readline()
+	stdout.readline()
+
+	lista = []
+	for linha in stdout.readlines():
+		linha = linha.strip()
+		name = linha[5:].split(' ')[0]
+		state= linha.split(' ')[-1]
+		if name!="":
+			lista.append( {"vm":name,"estado":True if state=='running' else False} )
+	return JSONResponse(content=jsonable_encoder(lista) )
+
+
