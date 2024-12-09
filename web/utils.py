@@ -38,12 +38,17 @@ class PegaTexto(Alerta):
 	def __init__(self, msg, callback, tit="Entre com texto", senha=False):
 		Alerta.__init__(self, msg, tit)
 		self.callback = callback
-		self.inputCpo = html.INPUT(autofocus=True, type="password")
+		self.inputCpo = html.INPUT(autofocus=True, type="password" if senha else "text")
 		self.inputCpo.className = "w3-input w3-border"
+		self.inputCpo.bind("keyup", self.handleTeclado)
 		botaoConfirma = html.DIV("OK", Class="w3-button w3-block")
 		botaoConfirma.bind("click", self.confirma)
 		self.modal <= self.inputCpo
 		self.modal <= botaoConfirma
+	def handleTeclado(self, event):
+		"""Handle Enter key press."""
+		if event.key == "Enter":
+			self.confirma(event)
 	def confirma(self, ev):
 		self.style.display='none'
 		self.callback(self.inputCpo.value)

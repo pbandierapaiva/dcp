@@ -8,12 +8,14 @@ from fastapi.responses import JSONResponse
 from fastapi.responses import RedirectResponse
 
 # Para gráficos de temperatura:
+import matplotlib
 import matplotlib.pyplot as plt
 import io
 import base64
 from datetime import datetime
 import pandas as pd
 import matplotlib.dates as mdates
+matplotlib.use("Agg")
 
 # Para IPMI
 from pyghmi.ipmi import command as IPMI

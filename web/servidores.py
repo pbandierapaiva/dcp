@@ -53,7 +53,7 @@ class Cabecalho(html.DIV):
         self.updateHook()
     def pedeCredencial(self, evt):
         if not self.autenticado:
-            PegaTexto("Autentica", self.confirmaCredencial)
+            PegaTexto("Autentica", self.confirmaCredencial, senha=True)
         else:
             self.autenticado=""
             self.confirmaCredencial("")
@@ -130,6 +130,7 @@ class CaixaServidor(html.DIV):
         texto = html.SPAN(f"{self.id} - {self.nome}",title=self.desc, 
             Class="w3-left")    
         
+        area1 = html.DIV(Class=f"w3-col s4")
         if self.autentica:
             self.hardOff = html.I("do_not_disturb", 
                 Class="w3-right material-icons w3-hover-pointer", 
@@ -143,7 +144,8 @@ class CaixaServidor(html.DIV):
                 Class="w3-right material-icons w3-hover-pointer", 
                 style="color:white")
             self.atualiza.bind("click", self.atualizaEstado)
-            
+            area1 = html.DIV(botaoLink("IPMI", f"http://{self.ipmi}"), Class=f"w3-col s4") #  w3-padding")
+          
             cabeca <= self.alteraEstado
             cabeca <= self.hardOff
             cabeca <= self.atualiza
@@ -164,7 +166,6 @@ class CaixaServidor(html.DIV):
         self.classList.add(corcaixa)
 
         grid_container = html.DIV(Class="w3-row-padding w3-padding")
-        area1 = html.DIV(botaoLink("IPMI", f"http://{self.ipmi}"), Class=f"w3-col s4") #  w3-padding")
         area2 = html.DIV(f"{self.tipo}", Class=f"w3-col s4") #  w3-padding")
         area3 = html.DIV( "---", Class=f"w3-col s4") #  w3-padding")
         if self.temp:
@@ -214,10 +215,11 @@ class CaixaServidor(html.DIV):
             alert(str(resposta))
         self.updateAparencia()
         
-class botaoLink(html.BUTTON):
+class botaoLink(html.I):
     def __init__(self, texto, url):
-        html.BUTTON.__init__(self,Class="w3-round w3-border") 
-        self.innerHTML = texto
+        # html.BUTTON.__init__(self,Class="w3-round w3-border") 
+        html.I.__init__(self, Class="material-icons w3-hover-pointer ")
+        self.innerHTML = "computer"
         self.link = url
         self.bind("click", self.abreJanela)
     def abreJanela(self,evt):
