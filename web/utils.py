@@ -123,4 +123,47 @@ class RadioEstado(html.DIV):
 			if self.estadoON.checked: return "1"
 			return None
 
+class ListaDialog(html.DIV):
+		def __init__(self, lista):
+			html.DIV.__init__(self, Class="w3-modal") #  w3-card-4 w3-animate-zoom
+			cont = html.DIV(Class="w3-modal-content w3-card-4 w3-animate-zoom") #, style="max-width: 500px;")
+			cabecalho = html.HEADER(Class="w3-container w3-teal")
+			botao = html.SPAN('&times;', Class="w3-button w3-display-topright")
+			botao.bind("click", self.esconde)
+			cabecalho <= botao
+			cabecalho <= html.H2("Servidor VMs")
+			cont <= cabecalho
+			corpo = html.DIV(Class="w3-container")
+			ul = html.UL(Class="w3-ul w3-hoverable")
+			for serv in lista:
+				it = html.LI()
+				it <= html.SPAN("&omicron;",Class="w3-text-green" 
+					if lista[serv] else"w3-text-red" )
+				it <= html.B(serv, Class="w3-padding-small")
+				ul <= it
+			corpo<= ul
+			cont <= corpo
+			self <=cont
+			self.style.display='block'
+		def esconde(self,evt):
+			self.style.display='none'
+"""        
+
+        <div class="w3-container">
+            <ul class="w3-ul w3-hoverable">
+                <!-- Populate the list dynamically -->
+                <li><b>lb.bioinfo:</b> <span class="w3-text-green">Running</span></li>
+                <li><b>openbsd7.4:</b> <span class="w3-text-green">Running</span></li>
+                <li><b>bootserver.nuvia:</b> <span class="w3-text-green">Running</span></li>
+                <li><b>named-slave3:</b> <span class="w3-text-green">Running</span></li>
+                <li><b>redcap:</b> <span class="w3-text-red">Stopped</span></li>
+            </ul>
+        </div>
+        <footer class="w3-container w3-teal">
+            <button onclick="document.getElementById('dataDialog').style.display='none'" 
+                    class="w3-button w3-red w3-right">Close</button>
+        </footer>
+    </div>
+</div>
+"""
 

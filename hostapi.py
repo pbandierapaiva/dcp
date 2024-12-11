@@ -27,6 +27,8 @@ from conexao import conexao, botToken
 
 # from conexao import SECRET_KEY,ALGORITHM,ACCESS_TOKEN_EXPIRE_MINUTES,
 from conexao import ADMIN_PASSWORD
+
+import paramiko
 from paramiko.client import SSHClient, AutoAddPolicy
 
 app = FastAPI()
@@ -240,6 +242,66 @@ async def host(autentica : Autentica):
 		res["Autenticado"]= False
 	res["result"] = tudo
 	return JSONResponse(content=jsonable_encoder(res))
+
+@app.post("/hosts/{hostid}")
+async def host(hostid, autentica : Autentica):
+	res = {}
+	res["id"] = hostid
+	if autentica.password==ADMIN_PASSWORD:
+		res["Autenticado"]= True
+	else:
+		res["Autenticado"]= False	
+	sql=f"""
+			SELECT 
+				servidor.id,
+				servidor.Nome,
+				servidor.HostIP,	
+				servidor.IP_USER,	
+				servidor.DC,	
+				servidor.H_S_X,	
+				servidor.Descricao,		
+				servidor.habilitado		
+			FROM servidor
+			WHERE servidor.id = {res["id"]}
+		"""	
+	db = DB()
+	db.cursor.execute(sql)
+	# res["servidor"] = db.cursor.fetchone()
+	dados = db.cursor.fetchone()
+	# return JSONResponse(content=jsonable_encoder(dados))
+
+	client = SSHClient()	
+	client.set_missing_host_key_policy(AutoAddPolicy())
+	chavePrivada = paramiko.ECDSAKey.from_private_key_file('dcp_ecdsa.key')
+	try:
+		client.connect(dados['HostIP'],username='root',pkey=chavePrivada)
+		stdin, stdout, stderr = client.exec_command("virsh list --all")
+		saida = stdout.read().decode().split('\n')
+		erro = stderr.read().decode()
+	except Exception as ex:
+		template = "ERRO: {0} Parâmetros:\n{1!r}"
+		m = template.format(type(ex).__name__, ex.args)
+		return JSONResponse(content=jsonable_encoder({'STATUS':'ERROR', 'MSG':m}))
+
+	if len(saida)>0: del saida[0]
+	if len(saida)>0: del saida[0]
+	if saida[-1]=='': del saida[-1]
+	if saida[-1]=='': del saida[-1]
+
+	resultado = {}
+	for line in saida:
+		parts = line.split()
+		servidor = parts[1]  # The second column
+		status = parts[-1]    # The last column
+		resultado[servidor] = status == "running"
+
+
+	# del saida[0]
+	# del saida[-1]
+	
+	
+	return JSONResponse(content=jsonable_encoder(resultado))
+
 
 @app.post("/hosts/power")
 async def host( controla : ControlaPower):

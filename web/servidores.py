@@ -9,7 +9,7 @@ import json
 
 class Cabecalho(html.DIV):
     def __init__(self, updateHook):
-        html.DIV.__init__(self, Class="w3-bar w3-card-2 w3-blue notranslate")
+        html.DIV.__init__(self, Class="w3-bar w3-card-2 w3-teal notranslate")
         self.innerHTML = "DCP-DIS-EPM-Unifesp"
         self.updateHook = updateHook
         self.autenticado=""
@@ -76,8 +76,8 @@ class GridServidores(html.DIV):
     def __init__(self, cabeca):
         html.DIV.__init__(self) 
         self.cabeca = cabeca
-        self.dcDIS = html.DIV(Class="w3-row w3-topbar w3-bottombar w3-border-blue w3-pale-blue")
-        self.dcSTI = html.DIV(Class="w3-row w3-topbar w3-bottombar w3-border-blue w3-pale-blue")
+        self.dcDIS = html.DIV(Class="w3-row w3-topbar w3-bottombar w3-border-teal w3-pale-teal")
+        self.dcSTI = html.DIV(Class="w3-row w3-topbar w3-bottombar w3-border-teal w3-pale-teal")
         self <= self.dcSTI
         self <= self.dcDIS 
         self.loadServerData()
@@ -157,16 +157,24 @@ class CaixaServidor(html.DIV):
             if (self.temp) and self.temp>35:
                 corcaixa="w3-light-red"
             else:
-                corcaixa="w3-light-green"
+                corcaixa="w3-green"
         else:
             if self.status is None:
                 corcaixa="w3-white"
             else: # OFF
-                corcaixa="w3-light-grey"
+                corcaixa="w3-grey"
         self.classList.add(corcaixa)
 
-        grid_container = html.DIV(Class="w3-row-padding w3-padding")
-        area2 = html.DIV(f"{self.tipo}", Class=f"w3-col s4") #  w3-padding")
+        grid_container = html.DIV(Class="w3-row-padding w3-padding-small")
+        if self.tipo == 'H':            
+                hostLink = html.SPAN("host", 
+                    Class="w3-left material-symbols-outlined w3-hover-pointer w3-col s4", 
+                    style="color:white")
+                hostLink.bind("click", self.checaVMs)
+                area2 = hostLink
+        else:
+            area2 = html.DIV(f"{self.tipo}", Class=f"w3-col s4") #  w3-padding")
+        
         area3 = html.DIV( "---", Class=f"w3-col s4") #  w3-padding")
         if self.temp:
             area3.innerHTML = f"{self.temp}°C"
@@ -194,7 +202,6 @@ class CaixaServidor(html.DIV):
     def powerON(self):
         # alert("ON")
         self.setPower("on")
-
     def setPower(self, action):
         ajax.post("/hosts/power", 
             data=json.dumps({
@@ -214,7 +221,16 @@ class CaixaServidor(html.DIV):
         except:
             alert(str(resposta))
         self.updateAparencia()
-        
+    def checaVMs(self, evt):
+        ajax.post(f"/hosts/{self.id}", 
+            data=json.dumps({'password':self.autentica}), 
+            oncomplete=self.vmsCarregadas,
+            headers={"Content-Type":"application/json"})       
+    def vmsCarregadas(self, res):
+        resposta = res.json
+        # alert(str(resposta))
+
+        document['dialog'] <= ListaDialog(resposta)
 class botaoLink(html.I):
     def __init__(self, texto, url):
         # html.BUTTON.__init__(self,Class="w3-round w3-border") 
