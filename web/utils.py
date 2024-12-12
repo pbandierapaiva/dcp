@@ -5,7 +5,7 @@ from browser.widgets.dialog import InfoDialog, Dialog
 
 from hostinfo import *
 
-class Cabecalho(html.DIV):
+class CabecalhoAntigo(html.DIV):
 	def __init__(self):
 		html.DIV.__init__(self, "DCP-DIS-EPM-Unifesp", id="cabecalho",
 			Class="w3-bar w3-card-2 w3-grey notranslate")
@@ -46,7 +46,6 @@ class PegaTexto(Alerta):
 		self.modal <= self.inputCpo
 		self.modal <= botaoConfirma
 	def handleTeclado(self, event):
-		"""Handle Enter key press."""
 		if event.key == "Enter":
 			self.confirma(event)
 	def confirma(self, ev):
@@ -145,25 +144,9 @@ class ListaDialog(html.DIV):
 			cont <= corpo
 			self <=cont
 			self.style.display='block'
+			self.bind("click",self.pegaTecla)
+		def pegaTecla(self, evt):
+			self.esconde(evt)
+
 		def esconde(self,evt):
 			self.style.display='none'
-"""        
-
-        <div class="w3-container">
-            <ul class="w3-ul w3-hoverable">
-                <!-- Populate the list dynamically -->
-                <li><b>lb.bioinfo:</b> <span class="w3-text-green">Running</span></li>
-                <li><b>openbsd7.4:</b> <span class="w3-text-green">Running</span></li>
-                <li><b>bootserver.nuvia:</b> <span class="w3-text-green">Running</span></li>
-                <li><b>named-slave3:</b> <span class="w3-text-green">Running</span></li>
-                <li><b>redcap:</b> <span class="w3-text-red">Stopped</span></li>
-            </ul>
-        </div>
-        <footer class="w3-container w3-teal">
-            <button onclick="document.getElementById('dataDialog').style.display='none'" 
-                    class="w3-button w3-red w3-right">Close</button>
-        </footer>
-    </div>
-</div>
-"""
-
