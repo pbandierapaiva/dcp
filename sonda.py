@@ -95,6 +95,7 @@ def verificaStatus():
     current_time = now.time()  # Correctly access the time object
     start_time = time(17, 0, 0)  # 17:00:00
     end_time = time(17, 2, 59)   # 17:02:59 
+    print(current_time)
     if start_time <= current_time <= end_time:
         enviaTelegram(results)
     
