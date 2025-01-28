@@ -17,7 +17,8 @@ import pytz
 def main():
     checaService()
     monitoraTemperaturas()
-    
+    sumarizaStatus()
+
 def monitoraTemperaturas():
     horasonda = datetime.now(pytz.timezone("America/Sao_Paulo")).strftime('%Y-%m-%d %H:%M:%S')
 
@@ -67,10 +68,9 @@ def monitoraTemperaturas():
         except:
             print(insereCmd)
     db.commit()
-    verificaStatus()
     print("Sonda concluída")
 
-def verificaStatus():
+def sumarizaStatus():
     sql = """
         SELECT 
         DC,
