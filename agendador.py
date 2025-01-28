@@ -14,6 +14,7 @@ def tarefaAgendada():
 
 def agendaMonitoramento():
     # Inicia scheduler
+    print("Agendador iniciado")
     scheduler = BackgroundScheduler()
     scheduler.start()
 
