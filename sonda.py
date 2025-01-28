@@ -15,6 +15,10 @@ import pytz
 
 
 def main():
+    checaService()
+    monitoraTemperaturas()
+    
+def monitoraTemperaturas():
     horasonda = datetime.now(pytz.timezone("America/Sao_Paulo")).strftime('%Y-%m-%d %H:%M:%S')
 
     db = DB()
@@ -22,6 +26,8 @@ def main():
     tudo = db.cursor.fetchall()
 
     for reg in tudo:
+
+
         insereCmd = """INSERT INTO servidor_log (id, ts, state, temp, rodada, DC) """
 
         ip = reg["IPMI_IP"]
@@ -84,9 +90,9 @@ def verificaStatus():
     
     for l in results:
         if ( l["DC"]=="DIS" and l["avg_temp"]>30 ) \
-            or ( l["DC"]=="STI" and l["avg_temp"]>35 ):
+            or ( l["DC"]=="STI" and l["avg_temp"]>35.5 ):
             print("ATENÇÃO!\n",str(l))
-            enviaTelegram(results)
+            enviaTelegramTemp(results)
         else:
             print("Status OK")
     
@@ -97,17 +103,34 @@ def verificaStatus():
     end_time = time(17, 2, 59)   # 17:02:59 
     print(current_time)
     if start_time <= current_time <= end_time:
-        enviaTelegram(results)
+        enviaTelegramTemp(results)
     
     sqlLimpa = """DELETE FROM servidor_log
         WHERE rodada < NOW() - INTERVAL 48 HOUR;"""
     db.cursor.execute(sqlLimpa)
     db.commit()
 
-def enviaTelegram(jdata):
-    BOT_TOKEN = botToken
-    CHAT_ID = "5211765818"
+def checaService():
+    print("Verificano serviços")
+    sql = 'select * from monitored_services'
+    db = DB()
+    db.cursor.execute(sql)
+    results = db.cursor.fetchall()
+    print(results)
+    for l in results:
+        url = f"http://{l['ip_address']}:{l['port']}"
+        try:
+            print("Checando "+url)
+            response = requests.head(url, timeout=3)
+            if response.status_code == 200:
+                print(l['service_name']+" OK!")
+            else:
+                print(l['service_name']+"Not OK!")
+                enviaTelegram(f"Falha no serviço: {l['service_name']}")
+        except requests.exceptions.RequestException as e:
+            enviaTelegram(f"Porta {l['port']} de {l['service_name']} inacessível. Erro: {e}")
 
+def enviaTelegramTemp(jdata):
     table_data = []
     for row in jdata:
         table_data.append([
@@ -121,15 +144,17 @@ def enviaTelegram(jdata):
     # Format the table using tabulate
     headers = ["DC", "Avg Temp", " ON", "OFF", "Rodada"]
     table = tabulate(table_data, headers=headers, tablefmt="pretty")
+    enviaTelegram(table)
 
-
+def enviaTelegram(texto):
+    BOT_TOKEN = botToken
+    CHAT_ID = "5211765818"
 
     url = f"https://api.telegram.org/bot{BOT_TOKEN}/sendMessage"
     payload = {
         "chat_id": CHAT_ID,
-        "text": f"```\n{table}\n```",
+        "text": f"```\n{texto}\n```",
         "parse_mode": "MarkdownV2",  # Use MarkdownV2 for monospaced text
-
     }
 
     response = requests.post(url, json=payload)
