@@ -90,7 +90,7 @@ def sumarizaStatus():
     
     for l in results:
         if ( l["DC"]=="DIS" and l["avg_temp"]>30 ) \
-            or ( l["DC"]=="STI" and l["avg_temp"]>35.5 ):
+            or ( l["DC"]=="STI" and l["avg_temp"]>36.5 ):
             print("ATENÇÃO!\n",str(l))
             enviaTelegramTemp(results)
         else:
