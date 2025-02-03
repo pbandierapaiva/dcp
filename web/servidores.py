@@ -203,7 +203,7 @@ class CaixaServidor(html.DIV):
         # alert("ON")
         self.setPower("on")
     def setPower(self, action):
-        ajax.post("/hosts/power", 
+        ajax.post("/power", 
             data=json.dumps({
                 'password': self.pwipmi,
                 'ipmiip':self.ipmi,

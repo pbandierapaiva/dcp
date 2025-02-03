@@ -304,7 +304,7 @@ async def host(hostid, autentica : Autentica):
 	return JSONResponse(content=jsonable_encoder(resultado))
 
 
-@app.post("/hosts/power")
+@app.post("/power")
 async def host( controla : ControlaPower):
 	print(controla.action, controla.ipmiip)
 	try:	
