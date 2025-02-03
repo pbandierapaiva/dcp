@@ -265,6 +265,7 @@ async def host(hostid, autentica : Autentica):
 			WHERE servidor.id = {res["id"]}
 		"""	
 	db = DB()
+	print(sql)
 	db.cursor.execute(sql)
 	# res["servidor"] = db.cursor.fetchone()
 	dados = db.cursor.fetchone()
